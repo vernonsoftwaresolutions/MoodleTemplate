@@ -1,0 +1,18 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  CidrBlock:
+    Type: String
+    Default: 192.168.0.0/16
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      EnableDnsHostnames: true
+      CidrBlock:
+        Ref: CidrBlock
+      Tags:
+      - Key: Name
+        Value:
+          "MAIN"
