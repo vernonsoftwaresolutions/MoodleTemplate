@@ -7,7 +7,7 @@ machine:
 
 test: 
   post: 
-    - "aws cloudformation validate-template moodletemplate.yml"
+    - "aws cloudformation validate-template --template-body moodletemplate.yml"
 
 deployment: 
   development: 
