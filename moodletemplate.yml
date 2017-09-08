@@ -19,6 +19,10 @@ Parameters:
   CidrBlock:
     Type: String
     Default: 192.168.0.0/16
+  #Bastion cidrs
+  BSTSN1Cidr:
+    Type: String
+    Default: 192.168.3.0/24
 
 Resources:
   VPC:
@@ -31,3 +35,125 @@ Resources:
       - Key: Name
         Value:
           "MAIN"
+
+##
+  # Internet GateWay
+  # Conditional:  Only create if VPC doesn't already exist
+  # The logic is a little backwards, could be reworked
+  ##
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: Name
+        Value:
+          !Join [ "", ["IG", "MAIN" ] ]
+      - Key: Tenant
+        Value:
+          "MAIN"
+
+  # attach the gateway
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+        Ref: VPC
+      InternetGatewayId:
+        Ref: InternetGateway
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPC
+      Tags:
+      - Key: Name
+        Value: MD_PVT_ROUTE
+      - Key: Tenant
+        Value:
+          "MAIN"
+      - Key: Name
+        Value:
+          !Join [ "", ["RTB", "MAIN" ] ]
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPC
+      Tags:
+      - Key: Name
+        Value:
+          !Join [ "", ["PRT", "MAIN" ] ]
+      - Key: Tenant
+        Value:
+          "MAIN"
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId:
+        Ref: PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: InternetGateway
+
+
+
+##
+  # Bastion routes
+  SQSSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: SubnetBASTION
+      RouteTableId:
+        Ref: PublicRouteTable
+##
+  # subnet route associations
+
+  # 3 SQS routes not included
+
+  # 3 APP routes not included
+
+  # 3 Web Tier Subnets not included
+
+  # 3 App Tier Subnets not included
+
+
+  # Bastion Host subnet
+  # only subnet moving over
+  SubnetBASTION:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPC
+      CidrBlock:
+        Ref: BSTSN1Cidr
+      AvailabilityZone:
+        !FindInMap [ RegionMap, !Ref "AWS::Region", AZ1 ]
+      Tags:
+        - Key: Name
+          Value: SANDBOX
+Outputs:
+  VPC:
+    Description: Main VPC
+    Value: !Ref VPC
+    Export:
+      Name: "MAIN"
+  PublicRouteTable:
+    Description: Public Route Table of Main VPC
+    Value: !Ref PublicRouteTable
+    Export:
+      Name: "PublicRouteTable"
+  PrivateRouteTable:
+    Description: Private Route Table of Main VPC
+    Value: !Ref PrivateRouteTable
+    Export:
+      Name: "PrivateRouteTable"
+  BastionSubnet:
+    Description: BastionSubnet Id
+    Value: !Ref SubnetBASTION
+    Export:
+      Name: BastionSubnet
