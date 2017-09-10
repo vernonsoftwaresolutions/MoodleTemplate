@@ -104,7 +104,7 @@ Resources:
         Ref: PublicRouteTable
   WSSubnet3RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
-    Properites:
+    Properties:
       SubnetId:
         Ref: WSSubnet3
       RouteTableId:
