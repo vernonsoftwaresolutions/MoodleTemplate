@@ -499,7 +499,7 @@ Resources:
           Value:
             Ref: Tenant
   RDSDB:
-    Type: AWS::RDS::dbinstance
+    Type: AWS::RDS::DBInstance
     Properties:
       # Resource Definition
       AllocatedStorage: '5'
