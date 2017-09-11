@@ -75,7 +75,26 @@ Parameters:
   BSTSN1Cidr:
     Type: String
     Default: 192.168.3.0/24
-
+  #DB params
+  DBInstance:
+    Type: String
+    Default: dbinstance
+  DBName:
+    Type: String
+    Default: dmdb
+  DBMasterUser:
+    Type: String
+    Default: root
+  DBMasterPassword:
+    Type: String
+    NoEcho: true
+    Default: replaceMe
+  DBIsMultiZone:
+    Type: String
+    AllowedValues:
+      - true
+      - false
+      Default: false
 Resources:
   VPC:
     Type: AWS::EC2::VPC
@@ -463,6 +482,67 @@ Resources:
       Tags:
         - Key: Name
           Value: SANDBOX
+  ##
+  # MySQL RDS definitions
+  ##
+  RDSDBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: "DB Subnet Group."
+      SubnetIds:
+          Ref: DBSubnet1
+          Ref: DBSubnet2
+      Tags:
+        - Key: Name
+          Value: !Join [ "", ["RDSSNG", Ref: Tenant ] ]
+        - Key: Tenant
+          Value:
+            Ref: Tenant
+  RDSDB:
+    Type: AWS::RDS::dbinstance
+    Properties:
+      # Resource Definition
+      AllocatedStorage: '5'
+      DBInstanceClass: db.t2.micro
+      BackupRetentionPeriod: 7
+      Engine: MySQL
+      DBParameterGroupName:
+        Ref: BarracudaParameterGroup
+      DBInstanceIdentifier:
+        Ref: DBInstance
+      DBName:
+        Ref: DBName
+      #
+      # Stub Credentials
+      # will work on shifting to IAM user later
+      #
+      MasterUsername:
+        Ref: DBMasterUser
+      MasterUserPassword:
+        Ref: DBMasterPassword
+      #
+      # placement
+      #
+      PubliclyAccessible: false
+      MultiAZ:
+        Ref: DBIsMultiZone
+      DBSubnetGroupName:
+        Ref: RDSDBSubnetGroup
+      Tags:
+        - Key: Name
+          Value: !Join [ "", ["RDS", Ref: Tenant ] ]
+        - Key: Tenant
+          Value:
+            Ref: Tenant
+  BarracudaParameterGroup:
+    Type: AWS::RDS::DBParameterGroup
+    Properties:
+      Description: Barracuda Moodle parameter group
+      Family: MySQL5.6
+      Parameters:
+        innodb_large_prefix: 1
+        innodb_file_format: Barracuda
+
 Outputs:
   VPC:
     Description: Main VPC
