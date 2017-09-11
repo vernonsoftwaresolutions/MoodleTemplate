@@ -16,13 +16,13 @@ Mappings:
       AZ3: us-west-2c
 
 Parameters:
-  VPCName:
-    Type: String
-    Description: Name of vpc to add ElastiCache to
-  PublicRouteTableParam:
-    Type: String
-  PrivateRouteTableParam:
-    Type: String
+  #VPCName:
+  #  Type: String
+  #  Description: Name of vpc to add ElastiCache to
+  #PublicRouteTableParam:
+  #  Type: String
+  #PrivateRouteTableParam:
+  #  Type: String
   Tenant:
     Type: String
     Default: development
