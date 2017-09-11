@@ -624,3 +624,6 @@ Outputs:
     Value: !Ref WSSubnet3
     Export:
       Name: !Join [ "", ["WSSubnet3", Ref: Tenant ] ]
+  DBUrl:
+    Description: DB Url endpoint
+    Value: !GetAtt RDSDB.Endpoint.Address
