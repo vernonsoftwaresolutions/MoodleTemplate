@@ -19,9 +19,9 @@ Parameters:
   VPCName:
     Type: String
     Description: Name of vpc to add ElastiCache to
-  PublicRouteTable:
+  PublicRouteTableParam:
     Type: String
-  PrivateRouteTable:
+  PrivateRouteTableParam:
     Type: String
   Tenant:
     Type: String
