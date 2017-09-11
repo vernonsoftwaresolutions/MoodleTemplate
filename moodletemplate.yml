@@ -183,7 +183,7 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId:
-        Ref: VPCName
+        Ref: VPC
       CidrBlock:
         Ref: WSSN1Cidr
       AvailabilityZone:
@@ -200,7 +200,7 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId:
-        Ref: VPCName
+        Ref: VPC
       CidrBlock:
         Ref: WSSN2Cidr
       AvailabilityZone:
@@ -217,7 +217,7 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId:
-        Ref: VPCName
+        Ref: VPC
       CidrBlock:
         Ref: WSSN3Cidr
       AvailabilityZone:
@@ -237,7 +237,7 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId:
-        Ref: VPCName
+        Ref: VPC
       CidrBlock:
         Ref: APPSN1Cidr
       AvailabilityZone:
@@ -253,7 +253,7 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId:
-        Ref: VPCName
+        Ref: VPC
       CidrBlock:
         Ref: APPSN2Cidr
       AvailabilityZone:
@@ -269,7 +269,7 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId:
-        Ref: VPCName
+        Ref: VPC
       CidrBlock:
         Ref: APPSN3Cidr
       AvailabilityZone:
@@ -281,7 +281,7 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId:
-        Ref: VPCName
+        Ref: VPC
       CidrBlock:
         Ref: DBSN1Cidr
       AvailabilityZone:
@@ -297,7 +297,7 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId:
-        Ref: VPCName
+        Ref: VPC
       CidrBlock:
         Ref: DBSN2Cidr
       AvailabilityZone:
@@ -317,7 +317,7 @@ Resources:
     Properties:
       VpcId:
         !ImportValue
-          Ref: VPCName
+          Ref: VPC
       CidrBlock:
         Ref: EFSN1Cidr
       AvailabilityZone:
@@ -334,7 +334,7 @@ Resources:
     Properties:
       VpcId:
         !ImportValue
-          Ref: VPCName
+          Ref: VPC
       CidrBlock:
         Ref: EFSN2Cidr
       AvailabilityZone:
@@ -351,7 +351,7 @@ Resources:
     Properties:
       VpcId:
         !ImportValue
-          Ref: VPCName
+          Ref: VPC
       CidrBlock:
         Ref: EFSN3Cidr
       AvailabilityZone:
@@ -370,7 +370,7 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId:
-        Ref: VPCName
+        Ref: VPC
       CidrBlock:
         Ref: MCSN1Cidr
       Availabilityzone:
