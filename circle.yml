@@ -1,24 +1,23 @@
---- 
-machine: 
-  python: 
+---
+machine:
+  python:
     version: "2.7.11"
-  ruby: 
+  ruby:
     version: "2.4.0"
 
-dependencies: 
-  override: 
+dependencies:
+  override:
     - "aws configure set default.region us-west-2"
     - "aws configure set default.output json"
 
-test: 
-  post: 
+test:
+  post:
     - "aws cloudformation validate-template --template-body file://moodletemplate.yml"
 
-deployment: 
-  development: 
+deployment:
+  development:
     branch: master
-    commands: 
+    commands:
       - "aws cloudformation package --template-file moodletemplate.yml --output-template-file moodletemplate-output.yml --s3-bucket circleci.deployables"
-      - "aws cloudformation deploy --template-file moodletemplate-output.yml --capabilities CAPABILITY_IAM --stack-name moodle-template --parameter-overrides CidrBlock=192.168.0.0/16"
+      - "aws cloudformation deploy --template-file moodletemplate-output.yml --capabilities CAPABILITY_IAM --stack-name moodle-template"
       - "aws cloudformation delete-stack --stack-name moodle-template"
-
