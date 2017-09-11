@@ -507,11 +507,13 @@ Outputs:
   EFSubnet3:
     Description: EFSubnet3 Id
     Value: !Ref EFSubnet3
+    Export:
+      Name: !Join [ "", ["EFSubnet3", Ref: Tenant ] ]
   MCSubnet1:
     Description: MCSubnet1 Id
     Value: !Ref MCSubnet1
     Export:
-      Name: !Join [ "", ["APPSubnet1", Ref: Tenant ] ]
+      Name: !Join [ "", ["MCSubnet1", Ref: Tenant ] ]
   APPSubnet1:
     Description: APPSubnet1 Id
     Value: !Ref APPSubnet1
