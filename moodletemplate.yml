@@ -92,9 +92,9 @@ Parameters:
   DBIsMultiZone:
     Type: String
     AllowedValues:
-      - true
-      - false
-      Default: false
+    - true
+    - false
+    Default: false
 Resources:
   VPC:
     Type: AWS::EC2::VPC
