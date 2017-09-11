@@ -118,7 +118,7 @@ Resources:
       RouteTableId:
         Ref: PrivateRouteTable
   APPSubnet2RouteTableAssociation:
-    Type: AWS::EC2:SubnetRouteTableAssociation
+    Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       SubnetId:
         Ref: APPSubnet2
@@ -187,7 +187,7 @@ Resources:
       CidrBlock:
         Ref: WSSN1Cidr
       AvailabilityZone:
-        !FindInMap [ RegionMap, !Ref "AWS::REGION", AZ1 ]
+        !FindInMap [ RegionMap, !Ref "AWS::Region", AZ1 ]
       MapPublicIpOnLaunch: true
       Tags:
       - Key: Tenant
