@@ -18,4 +18,4 @@ deployment:
   development:
     branch: master
     commands:
-          - "aws delete-stack --stack-name moodle-template"
+          - "aws cloudformation delete-stack --stack-name moodle-template"
