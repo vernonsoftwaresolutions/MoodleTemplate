@@ -397,7 +397,7 @@ Resources:
         Ref: VPC
       CidrBlock:
         Ref: MCSN1Cidr
-      Availabilityzone:
+      AvailabilityZone:
         !FindInMap [ RegionMap, !Ref "AWS::Region", AZ1]
       Tags:
       - Key: Tenant
