@@ -14,7 +14,6 @@ Mappings:
       AZ1: us-west-2a
       AZ2: us-west-2b
       AZ3: us-west-2c
-
 Parameters:
   Tenant:
     Type: String
@@ -72,9 +71,9 @@ Parameters:
   DBInstance:
     Type: String
     Default: dbinstance
-  DBUrl:
-    Type: String
-    Description: Url of database
+  #DBUrl:
+  #  Type: String
+  #  Description: Url of database
   DBName:
     Type: String
     Default: dmdb
@@ -92,18 +91,18 @@ Parameters:
     - true
     - false
     Default: false
-  MoodleBucket:
-    Type: String
-    Description: S3 bucket with moodle deployable
-  MoodleVersion:
-    Type: String
-    Description: Moodle Version deployable
-  EBEC2Role:
-    Type: String
-    Description: Role assumed by Elastic Beanstalk EC2 instances
-  EBServiceRole:
-    Type: String
-    Description: Role assumed by Elastic Beanstalk
+  #MoodleBucket:
+  #  Type: String
+  #  Description: S3 bucket with moodle deployable
+  #MoodleVersion:
+  #  Type: String
+  #  Description: Moodle Version deployable
+  #EBEC2Role:
+  #  Type: String
+  #  Description: Role assumed by Elastic Beanstalk EC2 instances
+  #EBServiceRole:
+  #  Type: String
+  #  Description: Role assumed by Elastic Beanstalk
 Resources:
   VPC:
     Type: AWS::EC2::VPC
@@ -554,121 +553,121 @@ Resources:
   ##
   # Elastic Beanstalk Application Definition:
   ##
-  MoodleApplication:
-    Type: AWS::ElasticBeanstalk::Application
-    Properties:
-      ApplicationName: Moodle Application
-      Description: Elastic Beanstalk Application
+  #MoodleApplication:
+  #  Type: AWS::ElasticBeanstalk::Application
+  #  Properties:
+  #    ApplicationName: Moodle Application
+  #    Description: Elastic Beanstalk Application
   ##
   # Initial Moodle Application Version
   ##
-  MoodleAppVersion:
-    Type: AWS::ElasticBeanstalk::ApplicationVersion
-    Properties:
-      ApplicationName:
-        Ref: MoodleApplication
-      Description: Initial Moodle App Version
-      SourceBundle:
-        S3Bucket:
-          Fn::Join:
-            - "-"
-            -
-              - Ref: MoodleBucket
-              - Ref: "AWS::Region"
-        S3Key:
-          Ref: MoodleVersion
+  #MoodleAppVersion:
+  #  Type: AWS::ElasticBeanstalk::ApplicationVersion
+  #  Properties:
+  #    ApplicationName:
+  #      Ref: MoodleApplication
+  #    Description: Initial Moodle App Version
+  #    SourceBundle:
+  #      S3Bucket:
+  #        Fn::Join:
+  #          - "-"
+  #          -
+  #            - Ref: MoodleBucket
+  #            - Ref: "AWS::Region"
+  #      S3Key:
+  #        Ref: MoodleVersion
   ##
   # Moodle elastic beanstalk environment
   ##
-  MoodleEnvironment:
-    Type: AWS::ElasticBeanstalk::Environment
-    Properties:
-      ApplicationName:
-        Ref: MoodleApplication
-      Description: !Sub AWS Elastic Beanstalk Environment running ${Tenant}
-      EnvironmentName:
-        Ref: Tenant
-      SolutionStackName: "64bit Amazon Linux 2016.09 v2.5.2 running Docker 1.12.6"
-      OptionSettings:
-        -
-          Namespace: aws:elasticbeanstalk:application:environment
-          OptionName: DATABASENAME
-          Value:
-            Ref: DBName
-        -
-          Namespace: aws:elasticbeanstalk:application:environment
-          OptionName: DATABASEURL
-          Value:
-            Ref: DBUrl
-        -
-          Namespace: aws:elasticbeanstalk:application:environment
-          OptionName: DATABASEUSER
-          Value:
-            Ref: DBMasterUser
-        -
-          Namespace: aws:elasticbeanstalk:application:environment
-          OptionName: DATABASEPASSWORD
-          Value:
-            Ref: DBMasterPassword
-        -
-          Namespace: aws:elasticbeanstalk:application:environment
-          OptionName: EBURL
-          Value: !Sub ${Tenant}.${AWS::Region}.elasticbeanstalk.com
-        -
-          Namespace: aws:autoscaling:launchconfiguration
-          OptionName: IamInstanceProfile
-          Value:
-            Ref: EBEC2Role
-        -
-          Namespace: aws:elasticbeanstalk:environment
-          OptionName: ServiceRole
-          Value:
-            Ref: EBServiceRole
-        -
-          Namespace: aws:ec2:vpc
-          OptionName: VPCId
-          Value:
-            Ref: VPC
-        -
-          Namespace: aws:ec2:vpc
-          OptionName: Subnets
-          Value:
-            Fn::Join:
-              - ", "
-              -
-                - Ref: APPSubnet1
-                - Ref: APPSubnet2
-                - Ref: APPSubnet3
-        -
-          Namespace: aws:ec2:vpc
-          OptionName: ELBSubnets
-          Value:
-            Fn::Join:
-              - ", "
-              -
-                - Ref: WSSubnet1
-                - Ref: WSSubnet2
-                - Ref: WSSubnet3
-        -
-          Namespace: aws:ec2:vpc
-          OptionName: ELBScheme
-          Value: external
-        -
-          Namespace: aws:autoscaling:launchconfiguration
-          OptionName: InstanceType
-          Value: t2.micro
-        -
-          Namespace: aws:autoscaling:launchconfiguration
-          OptionName: ImageId
+  #MoodleEnvironment:
+  #  Type: AWS::ElasticBeanstalk::Environment
+  #  Properties:
+  #    ApplicationName:
+  #      Ref: MoodleApplication
+  #    Description: !Sub AWS Elastic Beanstalk Environment running ${Tenant}
+  #    EnvironmentName:
+  #      Ref: Tenant
+  #    SolutionStackName: "64bit Amazon Linux 2016.09 v2.5.2 running Docker 1.12.6"
+  #    OptionSettings:
+  #      -
+  #        Namespace: aws:elasticbeanstalk:application:environment
+  #        OptionName: DATABASENAME
+  #        Value:
+  #          Ref: DBName
+  #      -
+  #        Namespace: aws:elasticbeanstalk:application:environment
+  #        OptionName: DATABASEURL
+  #        Value:
+  #          Ref: DBUrl
+  #      -
+  #        Namespace: aws:elasticbeanstalk:application:environment
+  #        OptionName: DATABASEUSER
+  #        Value:
+  #          Ref: DBMasterUser
+  #      -
+  #        Namespace: aws:elasticbeanstalk:application:environment
+  #        OptionName: DATABASEPASSWORD
+  #        Value:
+  #          Ref: DBMasterPassword
+  #      -
+  #        Namespace: aws:elasticbeanstalk:application:environment
+  #        OptionName: EBURL
+  #        Value: !Sub ${Tenant}.${AWS::Region}.elasticbeanstalk.com
+  #      -
+  #        Namespace: aws:autoscaling:launchconfiguration
+  #        OptionName: IamInstanceProfile
+  #        Value:
+  #          Ref: EBEC2Role
+  #      -
+  #        Namespace: aws:elasticbeanstalk:environment
+  #        OptionName: ServiceRole
+  #        Value:
+  #          Ref: EBServiceRole
+  #      -
+  #        Namespace: aws:ec2:vpc
+  #        OptionName: VPCId
+  #        Value:
+  #          Ref: VPC
+  #      -
+  #        Namespace: aws:ec2:vpc
+  #        OptionName: Subnets
+  #        Value:
+  #          Fn::Join:
+  #            - ", "
+  #            -
+  #              - Ref: APPSubnet1
+  #              - Ref: APPSubnet2
+  #              - Ref: APPSubnet3
+  #      -
+  #        Namespace: aws:ec2:vpc
+  #        OptionName: ELBSubnets
+  #        Value:
+  #          Fn::Join:
+  #            - ", "
+  #            -
+  #              - Ref: WSSubnet1
+  #              - Ref: WSSubnet2
+  #              - Ref: WSSubnet3
+  #      -
+  #        Namespace: aws:ec2:vpc
+  #        OptionName: ELBScheme
+  #        Value: external
+  #      -
+  #        Namespace: aws:autoscaling:launchconfiguration
+  #        OptionName: InstanceType
+  #        Value: t2.micro
+  #      -
+  #        Namespace: aws:autoscaling:launchconfiguration
+  #        OptionName: ImageId
           # todo-update to have region map
-          Value: ami-57dc2f41
+  #        Value: ami-57dc2f41
 
-      Tags:
-      - Key: Name
-        Value:
-          Ref: Tenant
-      VersionLabel:
-        Ref: MoodleAppVersion
+  #    Tags:
+  #    - Key: Name
+  #      Value:
+  #        Ref: Tenant
+  #    VersionLabel:
+  #      Ref: MoodleAppVersion
   MountTargetSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
