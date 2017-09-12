@@ -498,8 +498,8 @@ Resources:
     Properties:
       DBSubnetGroupDescription: "DB Subnet Group."
       SubnetIds:
-          Ref: DBSubnet1
-          Ref: DBSubnet2
+        - Ref: DBSubnet1
+        - Ref: DBSubnet2
       Tags:
         - Key: Name
           Value: !Join [ "", ["RDSSNG", Ref: Tenant ] ]
@@ -721,7 +721,7 @@ Resources:
     Properties:
       Description: Cache Subnet GroupDescription
       SubnetIds:
-        Ref: MCSubnet1
+      - Ref: MCSubnet1
   ElasticacheSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
