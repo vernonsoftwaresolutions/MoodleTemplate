@@ -196,7 +196,7 @@ Resources:
         Ref: EFSubnet3
       RouteTableId:
         Ref: PrivateRouteTable
-  # ElasticCache routes
+  # ElastiCache routes
   MCSubnet1RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -717,6 +717,37 @@ Resources:
         Ref: EFSubnet3
       SecurityGroups:
       - Ref: MountTargetSecurityGroup
+  ECSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      Description: Cache Subnet GroupDescription
+      SubnetIds:
+        Ref: MCSubnet1
+  ElasticacheSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Elasticache Security GroupDescription
+      SecurityGroupIngress:
+        -
+          IpProtocol: "tcp"
+          FromPort: "11211"
+          ToPort: "11211"
+      VpcId:
+        Ref: VPC
+  ElasticacheCluster:
+    Type: AWS::ElastiCache::CacheCluster
+    Properties:
+      AutoMinorVersionUpgrade: true
+      Engine: memcached
+      CacheNodeType: cache.t2.micro
+      CacheSubnetGroupName:
+        Ref: ECSubnetGroup
+      NumCacheNodes: 1
+      VpcSecurityGroupIds:
+        -
+          Fn::GetAtt:
+            - "ElasticacheSecurityGroup"
+            - "GroupId:"
 Outputs:
   VPC:
     Description: Main VPC
@@ -804,3 +835,9 @@ Outputs:
   EFSRef:
     Description: Elastic File System Reference
     Value: !Ref FileSystem
+  CacheEndpoint:
+    Description: Endpoint for memcached instance
+    Value: !GetAtt ElasticacheCluster.ConfigurationEndpoint.Address
+  CachePort:
+    Description: Endpoint for memcached instance
+    Value: !GetAtt ElasticacheCluster.ConfigurationEndpoint.Port
