@@ -668,6 +668,54 @@ Resources:
           Ref: Tenant
       VersionLabel:
         Ref: MoodleAppVersion
+  MountTargetSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId:
+        Ref: VPC
+      GroupDescription: Security group for mount target
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '2049'
+        ToPort: '2049'
+        CidrIp: 0.0.0.0/0
+  FileSystem:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      PerformanceMode: generalPurpose
+      FileSystemTags:
+      - Key: Name
+        Value: !Join [ "", ["EFS", Ref: Tenant ] ]
+      - Key: Tenant
+        Value:
+          Ref: Tenant
+  MountTarget1:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        Ref: FileSystem
+      SubnetId:
+        Ref: EFSubnet1
+      SecurityGroups:
+      - Ref: MountTargetSecurityGroup
+  MountTarget2:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        Ref: FileSystem
+      SubnetId:
+        Ref: EFSubnet2
+      SecurityGroups:
+      - Ref: MountTargetSecurityGroup
+  MountTarget3:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        Ref: FileSystem
+      SubnetId:
+        Ref: EFSubnet3
+      SecurityGroups:
+      - Ref: MountTargetSecurityGroup
 Outputs:
   VPC:
     Description: Main VPC
@@ -752,3 +800,6 @@ Outputs:
   DBUrl:
     Description: DB Url endpoint
     Value: !GetAtt RDSDB.Endpoint.Address
+  EFSRef:
+    Description: Elastic File System Reference
+    Value: !Ref FileSystem
