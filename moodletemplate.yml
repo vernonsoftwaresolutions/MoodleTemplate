@@ -565,17 +565,18 @@ Resources:
   MoodleAppVersion:
     Type: AWS::ElasticBeanstalk::ApplicationVersion
     Properties:
-      Ref: MoodleApplication
-    Description: Initial Moodle App Version
-    SourceBundle:
-      S3Bucket:
-        Fn::Join:
-          - "-"
-          -
-            - Ref: MoodleBucket
-            - Ref: "AWS::Region"
-      S3Key:
-        Ref: MoodleVersion
+      ApplicationName:
+        Ref: MoodleApplication
+      Description: Initial Moodle App Version
+      SourceBundle:
+        S3Bucket:
+          Fn::Join:
+            - "-"
+            -
+              - Ref: MoodleBucket
+              - Ref: "AWS::Region"
+        S3Key:
+          Ref: MoodleVersion
   ##
   # Moodle elastic beanstalk environment
   ##
