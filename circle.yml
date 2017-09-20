@@ -9,7 +9,6 @@ dependencies:
   override:
     - "aws configure set default.region us-west-2"
     - "aws configure set default.output json"
-    - development:
         timeout: 1200
 
 test:
