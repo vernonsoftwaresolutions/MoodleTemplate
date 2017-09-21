@@ -10,6 +10,10 @@ dependencies:
     - "aws configure set default.region us-west-2"
     - "aws configure set default.output json"
 
+test:
+  post:
+    - "aws cloudformation validate-template --template-body file://moodletemplate.yml"
+
 deployment:
   development:
     branch: master
