@@ -10,11 +10,12 @@ mkdir /var/moodledata
 DEBIAN_FRONTEND=noninteractive
 
 # Database info
-MYSQL_HOST=127.0.0.1
-MYSQL_USER=moodle
-MYSQL_PASSWORD=moodle
-MYSQL_DB=moodle
-MOODLE_URL=http://192.168.59.103
+echo export DB_PORT_3306_TCP_ADDR=127.0.0.1 >> /etc/environment
+echo export DB_ENV_MYSQL_DATABASE=moodle >> /etc/environment
+echo export DB_ENV_MYSQL_PASSWORD=moodle >> /etc/environment
+echo export DB_ENV_MYSQL_USER=moodle >> /etc/environment
+echo export DB_PORT_3306_TCP_PORT=http://192.168.59.103 >> /etc/environment
+echo export MOODLE_URL=http://192.168.59.103 >> /etc/environment
 
 #ADD ./foreground.sh /etc/apache2/foreground.sh
 
