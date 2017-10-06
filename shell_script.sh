@@ -1,47 +1,56 @@
 #!/bin/bash
 
-chmod +x ./shell_script.sh
-# upstart portion
-dpkg-divert --local --rename --add /sbin/initctl
-ln -sf /bin/true /sbin/initctl
+#COPY moodle-config.php /var/www/html/config.php
 
-#let container know there is no tty
-# ENV DEBIAN_FRONTEND noninteractive
-
-sudo apt-get update
-sudo apt-get -y upgrade
-# basic requirements
-sudo apt-get -y install mysql-server mysql-client pwgen python-setuptools curl git unzip
-
-# moodle requirements
-sudo apt-get -y install apache2 postfix wget supervisor vim curl libcurl3 libcurl3-dev
-sudo apt-get -y install php php-mysql php-xml php-curl php-zip php-gd php-xmlrpc php-soap php-mbstring php-intl
-# add zip extension
-echo 'extension=zip.so' >> /etc/php/7.0/apache2/php.ini
-# SSH
-sudo apt-get -y install openssh-server
-mkdir -p /var/run/sshd
-# apache required dirs
-mkdir -p /var/run/apache2
-mkdir -p /var/lock/apache2
-
-# mysql required dirs
-mkdir -p /var/run/mysqld
-chown mysql /var/run/mysqld
-# mysql config
-sed -i -e"s/^bind-address\s*=\s*127.0.0.1/bind-address = 0.0.0.0/" /etc/mysql/my.cnf
-
-easy_install supervisor
-add ./start.sh /start.sh
-add ./foregound.sh /etc/apache2/foreground.sh
-add ./supervisord.conf /etc/supervisord.conf
-
-sudo add https://download.moodle.org/download.php/direct/stable32/moodle-latest-32.tgz /var/www/moodle-latest.tgz
-sudo cd /var/www; tar zxvf moodle-latest.tgz; mv /var/www/moodle /var/www/html
-chown -R www-data:www-data /var/www/html/moodle
+# Keep upstart from complaining
+# RUN dpkg-divert --local --rename --add /sbin/initctl
+# RUN ln -sf /bin/true /sbin/initctl
 mkdir /var/moodledata
-zchown -R www-data:www-data /var/moodledata; chmod 777 /var/moodledata
-chmod 755 /start.sh /etc/apache2/foreground.sh
+# Let the container know that there is no tty
+export DEBIAN_FRONTEND=noninteractive
 
-expose 22 80
-CMD ["/bin/bash", "/start.sh"]
+set -x
+ENV_FILE=/root/env.sh
+echo "In the userdata script"
+mkdir -p `dirname $ENV_FILE`
+cat << EOF > $ENV_FILE
+#! /bin/bash
+export IMAGE_BUCKET=ElastixData
+export OUTPUT_BUCKET=regdata0813
+EOF
+chmod +x $ENV_FILE
+
+# Database info
+echo export DB_PORT_3306_TCP_ADDR=127.0.0.1 >> /etc/environment
+echo export DB_ENV_MYSQL_DATABASE=moodle >> /etc/environment
+echo export DB_ENV_MYSQL_PASSWORD=moodle >> /etc/environment
+echo export DB_ENV_MYSQL_USER=moodle >> /etc/environment
+echo export DB_PORT_3306_TCP_PORT=http://192.168.59.103 >> /etc/environment
+echo export MOODLE_URL=http://192.168.59.103 >> /etc/environment
+
+#ADD ./foreground.sh /etc/apache2/foreground.sh
+
+apt-get update && \
+	apt-get -y install mysql-client pwgen python-setuptools curl git unzip apache2 php5 \
+		php5-gd libapache2-mod-php5 postfix wget supervisor php5-pgsql curl libcurl3 \
+		libcurl3-dev php5-curl php5-xmlrpc php5-intl php5-mysql git-core && \
+	cd /tmp && \
+	git clone -b MOODLE_29_STABLE git://git.moodle.org/moodle.git --depth=1 && \
+	mv /tmp/moodle/* /var/www/html/ && \
+	rm /var/www/html/index.html && \
+	chown -R www-data:www-data /var/www/html && \
+#	chmod +x /etc/apache2/foreground.sh
+
+# Enable SSL, moodle requires it
+a2enmod ssl && a2ensite default-ssl # if using proxy, don't need actually secure connection
+
+echo "placeholder" > /var/moodledata/placeholder
+chown -R www-data:www-data /var/moodledata
+chmod 777 /var/moodledata
+
+read pid cmd state ppid pgrp session tty_nr tpgid rest < /proc/self/stat
+trap "kill -TERM -$pgrp; exit" EXIT TERM KILL SIGKILL SIGTERM SIGQUIT
+
+source /etc/apache2/envvars
+tail -F /var/log/apache2/* &
+exec apache2 -D FOREGROUND
