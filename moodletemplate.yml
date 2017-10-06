@@ -107,8 +107,8 @@ Parameters:
   CertBucket:
     Type: String
     Description: S3 bucket that contains certificates
-    InstanceType:
-      Ref: InstanceType
+  InstanceType:
+    Type: String
 Resources:
   VPC:
     Type: AWS::EC2::VPC
