@@ -1,5 +1,5 @@
 # aws cloudformation package --template-file moodletemplate.yaml --output-template-file moodletemplate-output.yaml --s3-bucket moodle-deployables
-# aws cloudformation deploy --template-file moodletemplate-output.yaml --capabilities CAPABILITY_IAM --stack-name jenkins --parameter-overrides Tenant=Company! DBInstance=moodle DBName=moodle DBIsMultiZone=false KeyName=SANDBOX CertBucket=moodle-deployables
+# aws cloudformation deploy --template-file moodletemplate-output.yaml --capabilities CAPABILITY_IAM --stack-name jenkins --parameter-overrides Tenant=Company! DBInstance=moodle DBName=moodle InstanceType=t2.micro DBIsMultiZone=false KeyName=SANDBOX CertBucket=moodle-deployables
 
 
 AWSTemplateFormatVersion: '2010-09-09'
@@ -107,7 +107,8 @@ Parameters:
   CertBucket:
     Type: String
     Description: S3 bucket that contains certificates
-
+    InstanceType:
+      Ref: InstanceType
 Resources:
   VPC:
     Type: AWS::EC2::VPC
@@ -500,6 +501,7 @@ Resources:
   ##
   RDSDBSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
+    DependsOn: MoodleInstance
     Properties:
       DBSubnetGroupDescription: "DB Subnet Group."
       SubnetIds:
@@ -563,6 +565,8 @@ Resources:
         !FindInMap [ ImageMap, !Ref "AWS::Region", ami ]
       KeyName:
         Ref: KeyName
+      InstanceType:
+        Ref: InstanceType
       NetworkInterfaces:
         - AssociatePublicIpAddress: "true"
           DeviceIndex: "0"
