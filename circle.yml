@@ -13,11 +13,12 @@ dependencies:
 test:
   post:
     - "aws cloudformation validate-template --template-body file://moodletemplate.yml"
-
+    
 deployment:
   development:
     branch: master
     commands:
-          - "aws cloudformation delete-stack --stack-name moodle-template"
-          - "aws cloudformation describe-stack-events --stack-name moodle-template"
           - "aws s3 cp config.php s3://moodle-deployables" 
+          - "aws cloudformation package --template-file moodletemplate.yaml --output-template-file moodletemplate-output.yaml --s3-bucket moodle-deployables"
+          - "aws cloudformation deploy --template-file moodletemplate-output.yaml --capabilities CAPABILITY_IAM --stack-name moodletemplate --parameter-overrides Tenant=CompanyA DBInstance=moodle DBName=moodle DBIsMultiZone=false KeyName=SANDBOX CertBucket=moodle-deployables"
+          - "aws cloudformation delete-stack --stack-name moodletemplate"

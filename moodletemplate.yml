@@ -1,6 +1,15 @@
+# aws cloudformation package --template-file moodletemplate.yaml --output-template-file moodletemplate-output.yaml --s3-bucket moodle-deployables
+# aws cloudformation deploy --template-file moodletemplate-output.yaml --capabilities CAPABILITY_IAM --stack-name jenkins --parameter-overrides Tenant=Company! DBInstance=moodle DBName=moodle DBIsMultiZone=false KeyName=SANDBOX CertBucket=moodle-deployables
+
+
 AWSTemplateFormatVersion: '2010-09-09'
 # Regional Map
 Mappings:
+  ImageMap:
+    us-east-1:
+      ami: ami-841f46ff
+    us-west-2:
+      ami: ami-718c6909
   RegionMap:
     us-east-1:
       AZ1: us-east-1a
@@ -91,18 +100,14 @@ Parameters:
     - true
     - false
     Default: false
-  #MoodleBucket:
-  #  Type: String
-  #  Description: S3 bucket with moodle deployable
-  #MoodleVersion:
-  #  Type: String
-  #  Description: Moodle Version deployable
-  #EBEC2Role:
-  #  Type: String
-  #  Description: Role assumed by Elastic Beanstalk EC2 instances
-  #EBServiceRole:
-  #  Type: String
-  #  Description: Role assumed by Elastic Beanstalk
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+  CertBucket:
+    Type: String
+    Description: S3 bucket that contains certificates
+
 Resources:
   VPC:
     Type: AWS::EC2::VPC
@@ -550,124 +555,126 @@ Resources:
       Parameters:
         innodb_large_prefix: 1
         innodb_file_format: Barracuda
-  ##
-  # Elastic Beanstalk Application Definition:
-  ##
-  #MoodleApplication:
-  #  Type: AWS::ElasticBeanstalk::Application
-  #  Properties:
-  #    ApplicationName: Moodle Application
-  #    Description: Elastic Beanstalk Application
-  ##
-  # Initial Moodle Application Version
-  ##
-  #MoodleAppVersion:
-  #  Type: AWS::ElasticBeanstalk::ApplicationVersion
-  #  Properties:
-  #    ApplicationName:
-  #      Ref: MoodleApplication
-  #    Description: Initial Moodle App Version
-  #    SourceBundle:
-  #      S3Bucket:
-  #        Fn::Join:
-  #          - "-"
-  #          -
-  #            - Ref: MoodleBucket
-  #            - Ref: "AWS::Region"
-  #      S3Key:
-  #        Ref: MoodleVersion
-  ##
-  # Moodle elastic beanstalk environment
-  ##
-  #MoodleEnvironment:
-  #  Type: AWS::ElasticBeanstalk::Environment
-  #  Properties:
-  #    ApplicationName:
-  #      Ref: MoodleApplication
-  #    Description: !Sub AWS Elastic Beanstalk Environment running ${Tenant}
-  #    EnvironmentName:
-  #      Ref: Tenant
-  #    SolutionStackName: "64bit Amazon Linux 2016.09 v2.5.2 running Docker 1.12.6"
-  #    OptionSettings:
-  #      -
-  #        Namespace: aws:elasticbeanstalk:application:environment
-  #        OptionName: DATABASENAME
-  #        Value:
-  #          Ref: DBName
-  #      -
-  #        Namespace: aws:elasticbeanstalk:application:environment
-  #        OptionName: DATABASEURL
-  #        Value:
-  #          Ref: DBUrl
-  #      -
-  #        Namespace: aws:elasticbeanstalk:application:environment
-  #        OptionName: DATABASEUSER
-  #        Value:
-  #          Ref: DBMasterUser
-  #      -
-  #        Namespace: aws:elasticbeanstalk:application:environment
-  #        OptionName: DATABASEPASSWORD
-  #        Value:
-  #          Ref: DBMasterPassword
-  #      -
-  #        Namespace: aws:elasticbeanstalk:application:environment
-  #        OptionName: EBURL
-  #        Value: !Sub ${Tenant}.${AWS::Region}.elasticbeanstalk.com
-  #      -
-  #        Namespace: aws:autoscaling:launchconfiguration
-  #        OptionName: IamInstanceProfile
-  #        Value:
-  #          Ref: EBEC2Role
-  #      -
-  #        Namespace: aws:elasticbeanstalk:environment
-  #        OptionName: ServiceRole
-  #        Value:
-  #          Ref: EBServiceRole
-  #      -
-  #        Namespace: aws:ec2:vpc
-  #        OptionName: VPCId
-  #        Value:
-  #          Ref: VPC
-  #      -
-  #        Namespace: aws:ec2:vpc
-  #        OptionName: Subnets
-  #        Value:
-  #          Fn::Join:
-  #            - ", "
-  #            -
-  #              - Ref: APPSubnet1
-  #              - Ref: APPSubnet2
-  #              - Ref: APPSubnet3
-  #      -
-  #        Namespace: aws:ec2:vpc
-  #        OptionName: ELBSubnets
-  #        Value:
-  #          Fn::Join:
-  #            - ", "
-  #            -
-  #              - Ref: WSSubnet1
-  #              - Ref: WSSubnet2
-  #              - Ref: WSSubnet3
-  #      -
-  #        Namespace: aws:ec2:vpc
-  #        OptionName: ELBScheme
-  #        Value: external
-  #      -
-  #        Namespace: aws:autoscaling:launchconfiguration
-  #        OptionName: InstanceType
-  #        Value: t2.micro
-  #      -
-  #        Namespace: aws:autoscaling:launchconfiguration
-  #        OptionName: ImageId
-          # todo-update to have region map
-  #        Value: ami-57dc2f41
 
-  #    Tags:
-  #    - Key: Name
-  #      Value:
-  #        Ref: Tenant
-  #    VersionLabel:
-  #      Ref: MoodleAppVersion
+  MoodleInstance: 
+    Type: "AWS::EC2::Instance"
+    Properties: 
+      ImageId:
+        !FindInMap [ ImageMap, !Ref "AWS::Region", ami ]
+      KeyName:
+        Ref: KeyName
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          GroupSet:
+            - !Ref MountTargetSecurityGroup
+            - !Ref ElasticacheSecurityGroup
+          SubnetId:
+            Ref: WSSubnet1
+      IamInstanceProfile:
+        Ref: MoodleProfile
+      UserData:
+        "Fn::Base64":
+          !Sub |
+          #!/bin/bash
+          - aws s3 cp s3://moodle-deployables /var/www/html/config.php
+
+          # Keep upstart from complaining
+          # RUN dpkg-divert --local --rename --add /sbin/initctl
+          # RUN ln -sf /bin/true /sbin/initctl
+          mkdir /var/moodledata
+          # Let the container know that there is no tty
+          export DEBIAN_FRONTEND=noninteractive
+
+          set -x
+          ENV_FILE=/root/env.sh
+          echo "In the userdata script"
+          mkdir -p `dirname $ENV_FILE`
+          cat << EOF > $ENV_FILE
+          #! /bin/bash
+          export IMAGE_BUCKET=ElastixData
+          export OUTPUT_BUCKET=regdata0813
+          EOF
+          chmod +x $ENV_FILE
+
+          # Database info
+          echo export DB_PORT_3306_TCP_ADDR=127.0.0.1 >> /etc/environment
+          echo export DB_ENV_MYSQL_DATABASE=moodle >> /etc/environment
+          echo export DB_ENV_MYSQL_PASSWORD=moodle >> /etc/environment
+          echo export DB_ENV_MYSQL_USER=moodle >> /etc/environment
+          echo export DB_PORT_3306_TCP_PORT=http://192.168.59.103 >> /etc/environment
+          echo export MOODLE_URL=http://192.168.59.103 >> /etc/environment
+
+          #ADD ./foreground.sh /etc/apache2/foreground.sh
+
+          apt-get update && \
+            apt-get -y install mysql-client pwgen python-setuptools curl git unzip apache2 php5 \
+              php5-gd libapache2-mod-php5 postfix wget supervisor php5-pgsql curl libcurl3 \
+              libcurl3-dev php5-curl php5-xmlrpc php5-intl php5-mysql git-core && \
+            cd /tmp && \
+            git clone -b MOODLE_29_STABLE git://git.moodle.org/moodle.git --depth=1 && \
+            mv /tmp/moodle/* /var/www/html/ && \
+            rm /var/www/html/index.html && \
+            chown -R www-data:www-data /var/www/html && \
+          #	chmod +x /etc/apache2/foreground.sh
+
+          # Enable SSL, moodle requires it
+          a2enmod ssl && a2ensite default-ssl # if using proxy, don't need actually secure connection
+
+          echo "placeholder" > /var/moodledata/placeholder
+          chown -R www-data:www-data /var/moodledata
+          chmod 777 /var/moodledata
+
+          read pid cmd state ppid pgrp session tty_nr tpgid rest < /proc/self/stat
+          trap "kill -TERM -$pgrp; exit" EXIT TERM KILL SIGKILL SIGTERM SIGQUIT
+
+          source /etc/apache2/envvars
+          tail -F /var/log/apache2/* &
+          exec apache2 -D FOREGROUND
+  CertS3Role:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "ec2.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "s3JenkinsCertpolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action: "s3:PutObject"
+                Resource:
+                  !Sub arn:aws:s3:::${CertBucket}/*
+              -
+                Effect: "Allow"
+                Action: "s3:GetObject"
+                Resource:
+                  !Sub arn:aws:s3:::${CertBucket}/*
+              -
+                Effect: "Allow"
+                Action: "s3:DeleteObject"
+                Resource:
+                  !Sub arn:aws:s3:::${CertBucket}/*
+
+  #Instance Profile for the EC2 Instance to assume
+  MoodleProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+        - Ref: CertS3Role
+
   MountTargetSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:

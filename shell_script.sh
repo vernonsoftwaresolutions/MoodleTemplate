@@ -1,7 +1,6 @@
 #!/bin/bash
 
-#COPY moodle-config.php /var/www/html/config.php
-
+aws s3 cp s3://moodle-deployables /var/www/html/config.php
 # Keep upstart from complaining
 # RUN dpkg-divert --local --rename --add /sbin/initctl
 # RUN ln -sf /bin/true /sbin/initctl
