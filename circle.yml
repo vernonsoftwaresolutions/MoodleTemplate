@@ -20,3 +20,4 @@ deployment:
     commands:
           - "aws cloudformation delete-stack --stack-name moodle-template"
           - "aws cloudformation describe-stack-events --stack-name moodle-template"
+          - "aws s3 cp config.php s3://moodle-deployables" 

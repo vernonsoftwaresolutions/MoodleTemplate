@@ -7,7 +7,18 @@
 # RUN ln -sf /bin/true /sbin/initctl
 mkdir /var/moodledata
 # Let the container know that there is no tty
-DEBIAN_FRONTEND=noninteractive
+export DEBIAN_FRONTEND=noninteractive
+
+set -x
+ENV_FILE=/root/env.sh
+echo "In the userdata script"
+mkdir -p `dirname $ENV_FILE`
+cat << EOF > $ENV_FILE
+#! /bin/bash
+export IMAGE_BUCKET=ElastixData
+export OUTPUT_BUCKET=regdata0813
+EOF
+chmod +x $ENV_FILE
 
 # Database info
 echo export DB_PORT_3306_TCP_ADDR=127.0.0.1 >> /etc/environment
