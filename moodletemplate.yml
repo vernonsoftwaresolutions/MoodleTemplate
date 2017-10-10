@@ -1,5 +1,5 @@
 # aws cloudformation package --template-file moodletemplate.yaml --output-template-file moodletemplate-output.yaml --s3-bucket moodle-deployables
-# aws cloudformation deploy --template-file moodletemplate-output.yaml --capabilities CAPABILITY_IAM --stack-name jenkins --parameter-overrides Tenant=Company! DBInstance=moodle DBName=moodle InstanceType=t2.micro DBIsMultiZone=false KeyName=SANDBOX CertBucket=moodle-deployables HostedZoneName=vssdevelopment.com MoodleDNSName=moodle.vssdevelopment.com
+# aws cloudformation deploy --template-file moodletemplate-output.yaml --capabilities CAPABILITY_IAM --stack-name jenkins --parameter-overrides Tenant=Company! DBInstance=moodle DBName=moodle InstanceType=t2.micro DBIsMultiZone=false KeyName=SANDBOX CertBucket=moodle-deployables HostedZoneName=vssdevelopment.com. MoodleDNSName=moodle.vssdevelopment.com
 
 
 AWSTemplateFormatVersion: '2010-09-09'
