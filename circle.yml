@@ -7,7 +7,11 @@ machine:
     version: "2.7.11"
   ruby:
     version: "2.4.0"
-
+  pre:
+    - pip install awscli
+    - aws configure set default.region us-east-1
+    - npm install newman --global
+    
 dependencies:
   override:
     - "aws configure set default.region us-west-2"
