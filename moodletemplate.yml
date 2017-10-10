@@ -1,5 +1,5 @@
 # aws cloudformation package --template-file moodletemplate.yaml --output-template-file moodletemplate-output.yaml --s3-bucket moodle-deployables
-# aws cloudformation deploy --template-file moodletemplate-output.yaml --capabilities CAPABILITY_IAM --stack-name jenkins --parameter-overrides Tenant=Company! DBInstance=moodle DBName=moodle InstanceType=t2.micro DBIsMultiZone=false KeyName=SANDBOX CertBucket=moodle-deployables
+# aws cloudformation deploy --template-file moodletemplate-output.yaml --capabilities CAPABILITY_IAM --stack-name jenkins --parameter-overrides Tenant=Company! DBInstance=moodle DBName=moodle InstanceType=t2.micro DBIsMultiZone=false KeyName=SANDBOX CertBucket=moodle-deployables HostedZoneName=vssdevelopment.com MoodleDNSName=moodle.vssdevelopment.com
 
 
 AWSTemplateFormatVersion: '2010-09-09'
@@ -109,6 +109,13 @@ Parameters:
     Description: S3 bucket that contains certificates
   InstanceType:
     Type: String
+  HostedZoneName:
+    Type: String
+    Description: Name of hosted zone
+  MoodleDNSName:
+    Type: String
+    Description: Moodle DNS Name
+
 Resources:
   VPC:
     Type: AWS::EC2::VPC
@@ -516,6 +523,7 @@ Resources:
   RDSDB:
     Type: AWS::RDS::DBInstance
     Properties:
+    #
       # Resource Definition
       AllocatedStorage: '5'
       DBInstanceClass: db.t2.micro
@@ -525,6 +533,8 @@ Resources:
         Ref: BarracudaParameterGroup
       DBInstanceIdentifier:
         Ref: DBInstance
+      VPCSecurityGroups:
+        - !Ref DBAccessSecurityGroup
       DBName:
         Ref: DBName
       #
@@ -558,6 +568,104 @@ Resources:
         innodb_large_prefix: 1
         innodb_file_format: Barracuda
 
+  WebAccessSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: WebAccessSecurityGroup
+      GroupDescription: "Security Group for web access"
+      Tags:
+        - Key: Name
+          Value: WebAccessSecurityGroup
+      VpcId:
+        Ref: VPC
+
+  WebAccessIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        Ref: WebAccessSecurityGroup
+      IpProtocol: tcp
+      FromPort: '80'
+      ToPort: '80'
+      SourceSecurityGroupId:
+        Ref: WebAccessSecurityGroup
+
+  DBAccessSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: DBAccessSecurityGroup
+      GroupDescription: "Security Group for db access"
+      Tags:
+        - Key: Name
+          Value: DBAccessSecurityGroup
+      VpcId:
+        Ref: VPC
+
+  DBAccessIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        Ref: DBAccessSecurityGroup
+      IpProtocol: tcp
+      FromPort: '80'
+      ToPort: '80'
+      SourceSecurityGroupId:
+        Ref: DBAccessSecurityGroup
+
+  WorldAccessSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: WorldAccessSecurityGroup
+      GroupDescription: Security Group for Web Access to Moodle ELB
+      #World accessible
+      SecurityGroupIngress:
+          - CidrIp: 0.0.0.0/0
+            IpProtocol: tcp
+            FromPort: 80
+            ToPort: 80
+      Tags:
+        - Key: ENV
+          Value: PROD
+      VpcId:
+        Ref: VPC
+
+ # Elastic Load Balancer Defintiion for Moodle
+  MoodleDNS:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneName:
+        Ref: HostedZoneName
+      Comment: Zone apex alias targeted to DockerDTRLoadBalancer.
+      RecordSets:
+      - Name:
+          !Join [".", [ !Ref MoodleDNSName , ""]]
+        Type: A
+        AliasTarget:
+          HostedZoneId: !GetAtt MoodleLoadBalancer.CanonicalHostedZoneNameID
+          DNSName: !GetAtt MoodleLoadBalancer.DNSName
+
+  MoodleLoadBalancer:
+    Type: AWS::ElasticLoadBalancing::LoadBalancer
+    Properties:
+      SecurityGroups:
+      - !Ref WebAccessSecurityGroup
+      - !Ref WorldAccessSecurityGroup
+      Scheme: internet-facing
+      Subnets:
+      - !Ref WSSubnet1
+      - !Ref WSSubnet2
+      - !Ref WSSubnet3
+      Instances:
+      - Ref: MoodleInstance
+      Listeners:
+      - LoadBalancerPort: '80'
+        InstancePort: '80'
+        Protocol: TCP
+        InstanceProtocol: TCP
+      Tags:
+      - Key: ENV
+        Value: PROD
+
   MoodleInstance: 
     Type: "AWS::EC2::Instance"
     Properties: 
@@ -573,6 +681,8 @@ Resources:
           GroupSet:
             - !Ref MountTargetSecurityGroup
             - !Ref ElasticacheSecurityGroup
+            - !Ref WebAccessSecurityGroup
+            - !Ref DBAccessSecurityGroup
           SubnetId:
             Ref: WSSubnet1
       IamInstanceProfile:
@@ -602,11 +712,11 @@ Resources:
           chmod +x $ENV_FILE
 
           # Database info
-          echo export DB_PORT_3306_TCP_ADDR=127.0.0.1 >> /etc/environment
-          echo export DB_ENV_MYSQL_DATABASE=moodle >> /etc/environment
-          echo export DB_ENV_MYSQL_PASSWORD=moodle >> /etc/environment
-          echo export DB_ENV_MYSQL_USER=moodle >> /etc/environment
-          echo export DB_PORT_3306_TCP_PORT=http://192.168.59.103 >> /etc/environment
+          echo export DB_PORT_3306_TCP_ADDR=${RDSDB.Endpoint.Address} >> /etc/environment
+          echo export DB_ENV_MYSQL_DATABASE=${DBName} >> /etc/environment
+          echo export DB_ENV_MYSQL_PASSWORD=${DBMasterPassword} >> /etc/environment
+          echo export DB_ENV_MYSQL_USER=${DBMasterUser} >> /etc/environment
+          echo export DB_PORT_3306_TCP_PORT=${RDSDB.Endpoint.Port} >> /etc/environment
           echo export MOODLE_URL=http://192.168.59.103 >> /etc/environment
 
           #ADD ./foreground.sh /etc/apache2/foreground.sh
@@ -635,6 +745,7 @@ Resources:
           source /etc/apache2/envvars
           tail -F /var/log/apache2/* &
           exec apache2 -D FOREGROUND
+
   CertS3Role:
     Type: "AWS::IAM::Role"
     Properties:
