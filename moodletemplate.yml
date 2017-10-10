@@ -581,7 +581,7 @@ Resources:
         "Fn::Base64":
           !Sub |
           #!/bin/bash
-          - aws s3 cp s3://moodle-deployables /var/www/html/config.php
+          aws s3 cp s3://moodle-deployables /var/www/html/config.php
 
           # Keep upstart from complaining
           # RUN dpkg-divert --local --rename --add /sbin/initctl
