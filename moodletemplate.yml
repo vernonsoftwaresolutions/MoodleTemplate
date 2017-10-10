@@ -508,7 +508,6 @@ Resources:
   ##
   RDSDBSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
-    DependsOn: MoodleInstance
     Properties:
       DBSubnetGroupDescription: "DB Subnet Group."
       SubnetIds:
