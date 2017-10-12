@@ -696,6 +696,8 @@ Resources:
           # RUN dpkg-divert --local --rename --add /sbin/initctl
           # RUN ln -sf /bin/true /sbin/initctl
           mkdir /var/moodledata
+          #todo- REFACTOR THIS DON'T WANT THIS PERMISSIONS!!
+          chmod 777 /var/moodledata
           # Let the container know that there is no tty
           export DEBIAN_FRONTEND=noninteractive
 
