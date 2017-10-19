@@ -696,8 +696,7 @@ Resources:
           # RUN dpkg-divert --local --rename --add /sbin/initctl
           # RUN ln -sf /bin/true /sbin/initctl
           mkdir /var/moodledata
-          #todo- REFACTOR THIS DON'T WANT THIS PERMISSIONS!!
-          chmod 777 /var/www
+         
           # Let the container know that there is no tty
           export DEBIAN_FRONTEND=noninteractive
 
@@ -732,13 +731,14 @@ Resources:
             rm /var/www/html/index.html && \
             chown -R www-data:www-data /var/www/html && \
           #	chmod +x /etc/apache2/foreground.sh
-
+          #todo- REFACTOR THIS DON'T WANT THIS PERMISSIONS!!
+          chmod 777 /var/www
           # Enable SSL, moodle requires it
           a2enmod ssl && a2ensite default-ssl # if using proxy, don't need actually secure connection
 
           echo "placeholder" > /var/moodledata/placeholder
           chown -R www-data:www-data /var/moodledata
-          chmod 777 /var/moodledata
+          chmod -R 777 /var/moodledata
 
           read pid cmd state ppid pgrp session tty_nr tpgid rest < /proc/self/stat
           trap "kill -TERM -$pgrp; exit" EXIT TERM KILL SIGKILL SIGTERM SIGQUIT
