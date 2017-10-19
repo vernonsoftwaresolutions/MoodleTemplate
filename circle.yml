@@ -1,7 +1,7 @@
 ---
 machine:
   environment:
-    STACK_NAME: moodlestack
+    STACK_NAME: moodle
     PROD_HOST: moodle.vssdevelopment.com
   python:
     version: "2.7.11"
