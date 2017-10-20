@@ -1,4 +1,3 @@
 # MoodleTemplate
-Alec readme 1
-alec readme # 2 - local changes
-alec readme 3 - testing git setup correctly
+repository containing cloudformation templates to create highly available moodle implementation & infrastructure.
+testing pull from VSCode plugin for source control
