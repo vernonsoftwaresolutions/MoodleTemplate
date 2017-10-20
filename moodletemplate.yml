@@ -697,10 +697,13 @@ Resources:
           # RUN ln -sf /bin/true /sbin/initctl
           mkdir /var/moodledata
           #todo- REFACTOR THIS DON'T WANT THIS PERMISSIONS!!
-          chmod 777 /var/www
+          chmod 755 /var/www
+          chown apache2 /var/www
           # Let the container know that there is no tty
           export DEBIAN_FRONTEND=noninteractive
-
+          #### MOUNT EFS
+          sudo apt-get -y install nfs-common
+          ${FileSystem}.efs.${AWS::Region}.amazonaws.com
           set -x
           ENV_FILE=/root/env.sh
           echo "In the userdata script"
@@ -719,7 +722,7 @@ Resources:
           echo export DB_ENV_MYSQL_USER=${DBMasterUser} >> /etc/environment
           echo export DB_PORT_3306_TCP_PORT=${RDSDB.Endpoint.Port} >> /etc/environment
           echo export MOODLE_URL=http://192.168.59.103 >> /etc/environment
-
+          echo export MEMCACHED_URL_PORT=${ConfigurationEndpoint.Address}:${ConfigurationEndpoint.Port} >> /etc/environment
           #ADD ./foreground.sh /etc/apache2/foreground.sh
 
           apt-get update && \
