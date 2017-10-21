@@ -871,17 +871,7 @@ Resources:
             - "ElasticacheSecurityGroup"
             - "GroupId"
 
-  ElasticacheSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Elasticache Security Group
-      SecurityGroupIngress:
-        -
-          IpProtocol: "tcp"
-          FromPort: "11211"
-          ToPort: "11211"
-      VpcId:
-        Ref: VPC
+
   ElasticacheSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
