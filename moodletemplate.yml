@@ -690,7 +690,6 @@ Resources:
         "Fn::Base64":
           !Sub |
           #!/bin/bash
-          aws s3 cp s3://moodle-deployables /var/www/html/config.php
 
           # Keep upstart from complaining
           # RUN dpkg-divert --local --rename --add /sbin/initctl
@@ -702,28 +701,18 @@ Resources:
          
           # Let the container know that there is no tty
           export DEBIAN_FRONTEND=noninteractive
-          #### MOUNT EFS
-          sudo apt-get -y install nfs-common
-          ${FileSystem}.efs.${AWS::Region}.amazonaws.com
+
           set -x
           ENV_FILE=/root/env.sh
           echo "In the userdata script"
           mkdir -p `dirname $ENV_FILE`
           cat << EOF > $ENV_FILE
-          #! /bin/bash
+       
           export IMAGE_BUCKET=ElastixData
           export OUTPUT_BUCKET=regdata0813
           EOF
           chmod +x $ENV_FILE
-
-          # Database info
-          echo export DB_PORT_3306_TCP_ADDR=${RDSDB.Endpoint.Address} >> /etc/environment
-          echo export DB_ENV_MYSQL_DATABASE=${DBName} >> /etc/environment
-          echo export DB_ENV_MYSQL_PASSWORD=${DBMasterPassword} >> /etc/environment
-          echo export DB_ENV_MYSQL_USER=${DBMasterUser} >> /etc/environment
-          echo export DB_PORT_3306_TCP_PORT=${RDSDB.Endpoint.Port} >> /etc/environment
-          echo export MOODLE_URL=http://192.168.59.103 >> /etc/environment
-          echo export MEMCACHED_URL_PORT=${ConfigurationEndpoint.Address}:${ConfigurationEndpoint.Port} >> /etc/environment
+         
           #ADD ./foreground.sh /etc/apache2/foreground.sh
 
           apt-get update && \
@@ -740,10 +729,26 @@ Resources:
           chmod 777 /var/www
           # Enable SSL, moodle requires it
           a2enmod ssl && a2ensite default-ssl # if using proxy, don't need actually secure connection
+          #echo export MEMCACHED_URL_PORT=${ConfigurationEndpoint.Address}:${ConfigurationEndpoint.Port} >> /etc/environment
+          
+          #use sed to make config configuration
+          aws s3 cp s3://moodle-deployables /var/www/html/config.php
+
+          sudo sed -ie "s/<DATABASEURL>/${RDSDB.Endpoint.Address}/" /var/www/html/config.php 
+          sudo sed -ie "s/<DATABASENAME>/${DBName}/" /var/www/html/config.php
+          sudo sed -ie "s/<DATABASEUSER>/${DBMasterUser}/" /var/www/html/config.php
+          sudo sed -ie "s/<DATABASEPASSWORD>/${DBMasterPassword}/" /var/www/html/config.php
+          sudo sed -ie "s/<WWWROOT>/${MoodleDNSName}/" /var/www/html/config.php
+          sudo sed -ie "s/<MEMCACHED_URL_PORT>/${ConfigurationEndpoint.Address}:${ConfigurationEndpoint.Port}/" /var/www/html/config.php
 
           echo "placeholder" > /var/moodledata/placeholder
           chown -R www-data:www-data /var/moodledata
           chmod -R 777 /var/moodledata
+
+          #### MOUNT EFS
+          
+          #sudo apt-get -y install nfs-common
+          #${FileSystem}.efs.${AWS::Region}.amazonaws.com
 
           read pid cmd state ppid pgrp session tty_nr tpgid rest < /proc/self/stat
           trap "kill -TERM -$pgrp; exit" EXIT TERM KILL SIGKILL SIGTERM SIGQUIT

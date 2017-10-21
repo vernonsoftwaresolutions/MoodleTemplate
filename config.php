@@ -38,10 +38,10 @@ $CFG = new stdClass();
 // and a username/password created to access it.                         //
 $CFG->dbtype    = 'mysqli';      // 'pgsql', 'mariadb', 'mysqli', 'mssql', 'sqlsrv' or 'oci'
 $CFG->dblibrary = 'native';     // 'native' only at the moment
-$CFG->dbhost    = getenv('DB_PORT_3306_TCP_ADDR');  // eg 'localhost' or 'db.isp.com' or IP
-$CFG->dbname    = getenv('DB_ENV_MYSQL_DATABASE');     // database name, eg moodle
-$CFG->dbuser    = getenv('DB_ENV_MYSQL_USER');   // your database username
-$CFG->dbpass    = getenv('DB_ENV_MYSQL_PASSWORD');   // your database password
+$CFG->dbhost    = '<DATABASEURL>';  // eg 'localhost' or 'db.isp.com' or IP
+$CFG->dbname    = '<DATABASENAME>';     // database name, eg moodle
+$CFG->dbuser    = '<DATABASEUSER>';   // your database username
+$CFG->dbpass    = '<DATABASEPASSWORD>';   // your database password
 $CFG->prefix    = 'mdl_';       // prefix to use for all table names
 $CFG->dboptions = array(
     'dbpersist' => false,       // should persistent database connections be
@@ -54,7 +54,7 @@ $CFG->dboptions = array(
                                 //  (please note mysql is always using socket
                                 //  if dbhost is 'localhost' - if you need
                                 //  local port connection use '127.0.0.1')
-    'dbport'    => getenv('DB_PORT_3306_TCP_PORT'),          // the TCP port number to use when connecting
+    'dbport'    => '',          // the TCP port number to use when connecting
                                 //  to the server. keep empty string for the
                                 //  default port
 );
@@ -68,7 +68,7 @@ $CFG->dboptions = array(
 //
 // If you need both intranet and Internet access please read
 // http://docs.moodle.org/en/masquerading
-$CFG->wwwroot   = getenv('MOODLE_URL');
+$CFG->wwwroot   = '<WWWROOT>';
 //=========================================================================
 // 3. DATA FILES LOCATION
 //=========================================================================
@@ -219,7 +219,7 @@ $CFG->admin = 'admin';
 //
 //   Memcached session handler (requires memcached server and extension):
 $CFG->session_handler_class = '\core\session\memcached';
-$CFG->session_memcached_save_path = getenv('MEMCACHED_URL_PORT');
+$CFG->session_memcached_save_path = '<MEMCACHED_URL_PORT>';
 $CFG->session_memcached_prefix = 'memc.sess.key.';
 $CFG->session_memcached_acquire_lock_timeout = 120;
 $CFG->session_memcached_lock_expire = 7200;  
