@@ -655,7 +655,7 @@ Resources:
       - !Ref WSSubnet2
       - !Ref WSSubnet3
       Instances:
-      - Ref: MoodleInstance
+      - Ref: MoodleEC2Instance
       Listeners:
       - LoadBalancerPort: '80'
         InstancePort: '80'
@@ -665,7 +665,7 @@ Resources:
       - Key: ENV
         Value: PROD
 
-  MoodleInstance: 
+  MoodleEC2Instance: 
     Type: "AWS::EC2::Instance"
     Properties: 
       ImageId:
