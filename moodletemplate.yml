@@ -791,6 +791,11 @@ Resources:
                   !Sub arn:aws:s3:::${CertBucket}/*
               -
                 Effect: "Allow"
+                Action: "s3:ListObjects"
+                Resource:
+                  !Sub arn:aws:s3:::${CertBucket}/*
+              -
+                Effect: "Allow"
                 Action: "s3:DeleteObject"
                 Resource:
                   !Sub arn:aws:s3:::${CertBucket}/*
