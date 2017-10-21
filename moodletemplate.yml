@@ -633,7 +633,7 @@ Resources:
       - !Ref WSSubnet2
       - !Ref WSSubnet3
       Instances:
-      - Ref: MoodleEC2Instance
+      - Ref: MoodleInstance
       Listeners:
       - LoadBalancerPort: '80'
         InstancePort: '80'
@@ -643,7 +643,7 @@ Resources:
       - Key: ENV
         Value: PROD
 
-  MoodleEC2Instance: 
+  MoodleInstance: 
     Type: "AWS::EC2::Instance"
     Properties: 
       ImageId:
@@ -668,6 +668,17 @@ Resources:
         "Fn::Base64":
           !Sub |
           #!/bin/bash
+
+
+          #### MOUNT EFS
+          echo "mounting efs"
+          sudo apt-get -y install nfs-common
+          mkdir -p /var/moodledata
+          chown -R www-data:www-data /var/moodledata
+          chmod -R 777 /var/moodledata
+          echo "${FileSystem}.efs.${AWS::Region}.amazonaws.com:/ /var/moodledata nfs4 nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 0 0" >> /etc/fstab
+          mount -a -t nfs4
+          echo "efs mounting complete"
 
           # Keep upstart from complaining
           # RUN dpkg-divert --local --rename --add /sbin/initctl
@@ -720,18 +731,6 @@ Resources:
           sudo sed -ie "s/<WWWROOT>/${MoodleDNSName}/" /var/www/html/config.php
           sudo sed -ie "s/<MEMCACHED_URL_PORT>/${ElasticacheCluster.ConfigurationEndpoint.Address}:${ElasticacheCluster.ConfigurationEndpoint.Port}/" /var/www/html/config.php
 
-
-
-
-          #### MOUNT EFS
-          echo "mounting efs"
-          sudo apt-get -y install nfs-common
-          mkdir -p /var/moodledata
-          chown -R www-data:www-data /var/moodledata
-          # chmod -R 777 /var/moodledata
-          echo "${FileSystem}.efs.${AWS::Region}.amazonaws.com:/ /var/moodledata nfs4 nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 0 0" >> /etc/fstab
-          mount -a -t nfs4
-          echo "efs mounting complete"
 
           read pid cmd state ppid pgrp session tty_nr tpgid rest < /proc/self/stat
           trap "kill -TERM -$pgrp; exit" EXIT TERM KILL SIGKILL SIGTERM SIGQUIT
