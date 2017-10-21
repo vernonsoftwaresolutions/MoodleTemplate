@@ -802,15 +802,24 @@ Resources:
   MountTargetSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
+      GroupName: MountTargetSecurityGroup
+      GroupDescription: Security group for mount target
+      Tags:
+        - Key: Name
+          Value: MountTargetSecurityGroup
       VpcId:
         Ref: VPC
-      GroupDescription: Security group for mount target
-      SecurityGroupIngress:
-      - IpProtocol: tcp
-        FromPort: '2049'
-        ToPort: '2049'
-        CidrIp: 0.0.0.0/0
 
+  MountTargetIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        Ref: MountTargetSecurityGroup
+      IpProtocol: tcp
+      FromPort: '2049'
+      ToPort: '2049'
+      SourceSecurityGroupId:
+        Ref: MountTargetSecurityGroup
 
   FileSystem:
     Type: AWS::EFS::FileSystem
@@ -876,7 +885,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupName: ElasticacheSecurityGroup
-      GroupDescription: "Security Group for db access"
+      GroupDescription: "Security Group for memcached access"
       Tags:
         - Key: Name
           Value: ElasticacheSecurityGroup
