@@ -731,6 +731,8 @@ Resources:
           a2enmod ssl && a2ensite default-ssl 
           # if using proxy, don't need actually secure connection          
           #use sed to make config configuration
+          sudo apt-get install python-pip -y
+          pip install awscli --upgrade --user
           aws s3 cp s3://moodle-deployables /var/www/html/config.php
 
           sudo sed -ie "s/<DATABASEURL>/${RDSDB.Endpoint.Address}/" /var/www/html/config.php 
@@ -738,7 +740,7 @@ Resources:
           sudo sed -ie "s/<DATABASEUSER>/${DBMasterUser}/" /var/www/html/config.php
           sudo sed -ie "s/<DATABASEPASSWORD>/${DBMasterPassword}/" /var/www/html/config.php
           sudo sed -ie "s/<WWWROOT>/${MoodleDNSName}/" /var/www/html/config.php
-          # sudo sed -ie "s/<MEMCACHED_URL_PORT>/${ElasticacheCluster.ConfigurationEndpoint.Address}:${ElasticacheCluster.ConfigurationEndpoint.Port}/" /var/www/html/config.php
+          sudo sed -ie "s/<MEMCACHED_URL_PORT>/${ElasticacheCluster.ConfigurationEndpoint.Address}:${ElasticacheCluster.ConfigurationEndpoint.Port}/" /var/www/html/config.php
 
           echo "placeholder" > /var/moodledata/placeholder
           chown -R www-data:www-data /var/moodledata
