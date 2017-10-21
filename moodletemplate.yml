@@ -740,7 +740,7 @@ Resources:
           sudo sed -ie "s/<DATABASENAME>/${DBName}/" /var/www/html/config.php
           sudo sed -ie "s/<DATABASEUSER>/${DBMasterUser}/" /var/www/html/config.php
           sudo sed -ie "s/<DATABASEPASSWORD>/${DBMasterPassword}/" /var/www/html/config.php
-          sudo sed -ie "s/<WWWROOT>/${MoodleDNSName}/" /var/www/html/config.php
+          sudo sed -ie "s/<WWWROOT>/http://${MoodleDNSName}/" /var/www/html/config.php
           sudo sed -ie "s/<MEMCACHED_URL_PORT>/${ElasticacheCluster.ConfigurationEndpoint.Address}:${ElasticacheCluster.ConfigurationEndpoint.Port}/" /var/www/html/config.php
 
           echo "placeholder" > /var/moodledata/placeholder
