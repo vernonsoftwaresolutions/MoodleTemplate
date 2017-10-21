@@ -68,7 +68,7 @@ $CFG->dboptions = array(
 //
 // If you need both intranet and Internet access please read
 // http://docs.moodle.org/en/masquerading
-$CFG->wwwroot   = '<WWWROOT>';
+$CFG->wwwroot   = 'http://<WWWROOT>';
 //=========================================================================
 // 3. DATA FILES LOCATION
 //=========================================================================
