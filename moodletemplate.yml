@@ -656,8 +656,8 @@ Resources:
         - AssociatePublicIpAddress: "true"
           DeviceIndex: "0"
           GroupSet:
-            - !Ref MountTargetSecurityGroup
-            - !Ref ElasticacheSecurityGroup
+            - !Ref EFSSecurityGroup
+            - !Ref MemcachedSecurityGroup
             - !Ref WebAccessSecurityGroup
             - !Ref DBAccessSecurityGroup
           SubnetId:
@@ -798,14 +798,14 @@ Resources:
       Roles:
         - Ref: CertS3Role
 
-  MountTargetSecurityGroup:
+  EFSSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupName: MountTargetSecurityGroup
+      GroupName: EFSSecurityGroup
       GroupDescription: Security group for mount target
       Tags:
         - Key: Name
-          Value: MountTargetSecurityGroup
+          Value: EFSSecurityGroup
       VpcId:
         Ref: VPC
 
@@ -813,12 +813,12 @@ Resources:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId:
-        Ref: MountTargetSecurityGroup
+        Ref: EFSSecurityGroup
       IpProtocol: tcp
       FromPort: '2049'
       ToPort: '2049'
       SourceSecurityGroupId:
-        Ref: MountTargetSecurityGroup
+        Ref: EFSSecurityGroup
 
   FileSystem:
     Type: AWS::EFS::FileSystem
@@ -838,7 +838,7 @@ Resources:
       SubnetId:
         Ref: EFSubnet1
       SecurityGroups:
-      - Ref: MountTargetSecurityGroup
+      - Ref: EFSSecurityGroup
   MountTarget2:
     Type: AWS::EFS::MountTarget
     Properties:
@@ -847,7 +847,7 @@ Resources:
       SubnetId:
         Ref: EFSubnet2
       SecurityGroups:
-      - Ref: MountTargetSecurityGroup
+      - Ref: EFSSecurityGroup
   MountTarget3:
     Type: AWS::EFS::MountTarget
     Properties:
@@ -856,7 +856,7 @@ Resources:
       SubnetId:
         Ref: EFSubnet3
       SecurityGroups:
-      - Ref: MountTargetSecurityGroup
+      - Ref: EFSSecurityGroup
   ECSubnetGroup:
     Type: AWS::ElastiCache::SubnetGroup
     Properties:
@@ -876,18 +876,17 @@ Resources:
       VpcSecurityGroupIds:
         -
           Fn::GetAtt:
-            - "ElasticacheSecurityGroup"
+            - "MemcachedSecurityGroup"
             - "GroupId"
 
-
-  ElasticacheSecurityGroup:
+  MemcachedSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupName: ElasticacheSecurityGroup
+      GroupName: MemcachedSecurityGroup
       GroupDescription: "Security Group for memcached access"
       Tags:
         - Key: Name
-          Value: ElasticacheSecurityGroup
+          Value: MemcachedSecurityGroup
       VpcId:
         Ref: VPC
 
@@ -895,12 +894,12 @@ Resources:
     Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId:
-        Ref: ElasticacheSecurityGroup
+        Ref: MemcachedSecurityGroup
       IpProtocol: tcp
       FromPort: '11211'
       ToPort: '11211'
       SourceSecurityGroupId:
-        Ref: ElasticacheSecurityGroup
+        Ref: MemcachedSecurityGroup
 
   DBAccessSecurityGroup:
     Type: AWS::EC2::SecurityGroup
