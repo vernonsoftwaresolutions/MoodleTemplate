@@ -732,7 +732,7 @@ Resources:
           # if using proxy, don't need actually secure connection          
           #use sed to make config configuration
           sudo apt-get install python-pip -y
-          pip install awscli --upgrade --user
+          sudo pip install awscli --upgrade --user
           aws s3 cp s3://moodle-deployables /var/www/html/config.php
 
           sudo sed -ie "s/<DATABASEURL>/${RDSDB.Endpoint.Address}/" /var/www/html/config.php 
