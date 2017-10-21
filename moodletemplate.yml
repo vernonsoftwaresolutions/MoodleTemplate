@@ -655,7 +655,7 @@ Resources:
       - !Ref WSSubnet2
       - !Ref WSSubnet3
       Instances:
-      - Ref: MoodleInstance
+      - Ref: MoodleEC2Instance
       Listeners:
       - LoadBalancerPort: '80'
         InstancePort: '80'
@@ -665,7 +665,7 @@ Resources:
       - Key: ENV
         Value: PROD
 
-  MoodleInstance: 
+  MoodleEC2Instance: 
     Type: "AWS::EC2::Instance"
     Properties: 
       ImageId:
@@ -734,7 +734,7 @@ Resources:
           #use sed to make config configuration
           sudo apt-get install python-pip -y
           sudo pip install awscli
-          sudo aws s3 cp s3://moodle-deployables /var/www/html/config.php --region us-west-2
+          sudo aws s3 cp s3://moodle-deployables/config.php /var/www/html/config.php --region us-west-2
 
           sudo sed -ie "s/<DATABASEURL>/${RDSDB.Endpoint.Address}/" /var/www/html/config.php 
           sudo sed -ie "s/<DATABASENAME>/${DBName}/" /var/www/html/config.php
