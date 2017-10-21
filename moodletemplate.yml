@@ -739,7 +739,7 @@ Resources:
           sudo sed -ie "s/<DATABASEUSER>/${DBMasterUser}/" /var/www/html/config.php
           sudo sed -ie "s/<DATABASEPASSWORD>/${DBMasterPassword}/" /var/www/html/config.php
           sudo sed -ie "s/<WWWROOT>/${MoodleDNSName}/" /var/www/html/config.php
-          sudo sed -ie "s/<MEMCACHED_URL_PORT>/${ConfigurationEndpoint.Address}:${ConfigurationEndpoint.Port}/" /var/www/html/config.php
+         # sudo sed -ie "s/<MEMCACHED_URL_PORT>/${ConfigurationEndpoint.Address}:${ConfigurationEndpoint.Port}/" /var/www/html/config.php
 
           echo "placeholder" > /var/moodledata/placeholder
           chown -R www-data:www-data /var/moodledata
