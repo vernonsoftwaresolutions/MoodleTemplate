@@ -633,7 +633,7 @@ Resources:
       - !Ref WSSubnet2
       - !Ref WSSubnet3
       Instances:
-      - Ref: MoodleInstance
+      - Ref: MoodleEC2Instance
       Listeners:
       - LoadBalancerPort: '80'
         InstancePort: '80'
@@ -643,7 +643,7 @@ Resources:
       - Key: ENV
         Value: PROD
 
-  MoodleInstance: 
+  MoodleEC2Instance: 
     Type: "AWS::EC2::Instance"
     Properties: 
       ImageId:
@@ -676,8 +676,11 @@ Resources:
           mkdir -p /var/moodledata
           chown -R www-data:www-data /var/moodledata
           chmod -R 777 /var/moodledata
+
           echo "${FileSystem}.efs.${AWS::Region}.amazonaws.com:/ /var/moodledata nfs4 nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 0 0" >> /etc/fstab
           mount -a -t nfs4
+          #todo-refactor, bad
+          sudo chmod 777 /var/moodledata/
           echo "efs mounting complete"
 
           # Keep upstart from complaining
@@ -705,7 +708,7 @@ Resources:
 
           apt-get update && \
             apt-get -y install mysql-client pwgen python-setuptools curl git unzip apache2 php5 \
-              php5-gd libapache2-mod-php5 postfix wget supervisor php5-pgsql curl libcurl3 \
+              php5-gd libapache2-mod-php5 postfix wget supervisor php5-pgsql curl libcurl3 php5-memcached memcached \
               libcurl3-dev php5-curl php5-xmlrpc php5-intl php5-mysql git-core && \
             cd /tmp && \
             git clone -b MOODLE_29_STABLE git://git.moodle.org/moodle.git --depth=1 && \
