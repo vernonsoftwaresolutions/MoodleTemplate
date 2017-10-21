@@ -589,28 +589,6 @@ Resources:
       SourceSecurityGroupId:
         Ref: WebAccessSecurityGroup
 
-  DBAccessSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupName: DBAccessSecurityGroup
-      GroupDescription: "Security Group for db access"
-      Tags:
-        - Key: Name
-          Value: DBAccessSecurityGroup
-      VpcId:
-        Ref: VPC
-
-  DBAccessIngress:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      GroupId:
-        Ref: DBAccessSecurityGroup
-      IpProtocol: tcp
-      FromPort: '3306'
-      ToPort: '3306'
-      SourceSecurityGroupId:
-        Ref: DBAccessSecurityGroup
-
   WorldAccessSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -694,7 +672,6 @@ Resources:
           # Keep upstart from complaining
           # RUN dpkg-divert --local --rename --add /sbin/initctl
           # RUN ln -sf /bin/true /sbin/initctl
-          mkdir /var/moodledata
           #todo- REFACTOR THIS DON'T WANT THIS PERMISSIONS!!
           chmod 755 /var/www
           chown apache2 /var/www
@@ -743,14 +720,18 @@ Resources:
           sudo sed -ie "s/<WWWROOT>/${MoodleDNSName}/" /var/www/html/config.php
           sudo sed -ie "s/<MEMCACHED_URL_PORT>/${ElasticacheCluster.ConfigurationEndpoint.Address}:${ElasticacheCluster.ConfigurationEndpoint.Port}/" /var/www/html/config.php
 
-          echo "placeholder" > /var/moodledata/placeholder
-          chown -R www-data:www-data /var/moodledata
-          chmod -R 777 /var/moodledata
+
+
 
           #### MOUNT EFS
-          
-          #sudo apt-get -y install nfs-common
-          #${FileSystem}.efs.${AWS::Region}.amazonaws.com
+          echo "mounting efs"
+          sudo apt-get -y install nfs-common
+          mkdir -p /var/moodledata
+          chown -R www-data:www-data /var/moodledata
+          # chmod -R 777 /var/moodledata
+          echo "${FileSystem}.efs.${AWS::Region}.amazonaws.com:/ /var/moodledata nfs4 nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 0 0" >> /etc/fstab
+          mount -a -t nfs4
+          echo "efs mounting complete"
 
           read pid cmd state ppid pgrp session tty_nr tpgid rest < /proc/self/stat
           trap "kill -TERM -$pgrp; exit" EXIT TERM KILL SIGKILL SIGTERM SIGQUIT
@@ -829,6 +810,8 @@ Resources:
         FromPort: '2049'
         ToPort: '2049'
         CidrIp: 0.0.0.0/0
+
+
   FileSystem:
     Type: AWS::EFS::FileSystem
     Properties:
@@ -872,17 +855,7 @@ Resources:
       Description: Cache Subnet GroupDescription
       SubnetIds:
       - Ref: MCSubnet1
-  ElasticacheSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Elasticache Security Group
-      SecurityGroupIngress:
-        -
-          IpProtocol: "tcp"
-          FromPort: "11211"
-          ToPort: "11211"
-      VpcId:
-        Ref: VPC
+
   ElasticacheCluster:
     Type: AWS::ElastiCache::CacheCluster
     Properties:
@@ -897,6 +870,61 @@ Resources:
           Fn::GetAtt:
             - "ElasticacheSecurityGroup"
             - "GroupId"
+
+  ElasticacheSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Elasticache Security Group
+      SecurityGroupIngress:
+        -
+          IpProtocol: "tcp"
+          FromPort: "11211"
+          ToPort: "11211"
+      VpcId:
+        Ref: VPC
+  ElasticacheSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: ElasticacheSecurityGroup
+      GroupDescription: "Security Group for db access"
+      Tags:
+        - Key: Name
+          Value: ElasticacheSecurityGroup
+      VpcId:
+        Ref: VPC
+
+  ElasticacheIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        Ref: ElasticacheSecurityGroup
+      IpProtocol: tcp
+      FromPort: '11211'
+      ToPort: '11211'
+      SourceSecurityGroupId:
+        Ref: ElasticacheSecurityGroup
+
+  DBAccessSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: DBAccessSecurityGroup
+      GroupDescription: "Security Group for db access"
+      Tags:
+        - Key: Name
+          Value: DBAccessSecurityGroup
+      VpcId:
+        Ref: VPC
+
+  DBAccessIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId:
+        Ref: DBAccessSecurityGroup
+      IpProtocol: tcp
+      FromPort: '3306'
+      ToPort: '3306'
+      SourceSecurityGroupId:
+        Ref: DBAccessSecurityGroup
 Outputs:
   VPC:
     Description: Main VPC
