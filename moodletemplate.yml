@@ -655,7 +655,7 @@ Resources:
       - !Ref WSSubnet2
       - !Ref WSSubnet3
       Instances:
-      - Ref: MoodleEC2Instance
+      - Ref: MoodleInstance
       Listeners:
       - LoadBalancerPort: '80'
         InstancePort: '80'
@@ -665,7 +665,7 @@ Resources:
       - Key: ENV
         Value: PROD
 
-  MoodleEC2Instance: 
+  MoodleInstance: 
     Type: "AWS::EC2::Instance"
     Properties: 
       ImageId:
@@ -721,6 +721,7 @@ Resources:
               libcurl3-dev php5-curl php5-xmlrpc php5-intl php5-mysql git-core && \
             cd /tmp && \
             git clone -b MOODLE_29_STABLE git://git.moodle.org/moodle.git --depth=1 && \
+            #todo MOODLE_33_STABLE
             mv /tmp/moodle/* /var/www/html/ && \
             rm /var/www/html/index.html && \
             chown -R www-data:www-data /var/www/html && \
@@ -732,9 +733,8 @@ Resources:
           # if using proxy, don't need actually secure connection          
           #use sed to make config configuration
           sudo apt-get install python-pip -y
-          sudo pip install awscli --upgrade --user
-          sudo apt-get install awscli -y
-          aws s3 cp s3://moodle-deployables /var/www/html/config.php --region us-west-2
+          sudo pip install awscli
+          sudo aws s3 cp s3://moodle-deployables /var/www/html/config.php --region us-west-2
 
           sudo sed -ie "s/<DATABASEURL>/${RDSDB.Endpoint.Address}/" /var/www/html/config.php 
           sudo sed -ie "s/<DATABASENAME>/${DBName}/" /var/www/html/config.php
@@ -800,6 +800,15 @@ Resources:
                 Action: "s3:DeleteObject"
                 Resource:
                   !Sub arn:aws:s3:::${CertBucket}/*
+              -
+                #todo-this also seems wrong to me
+                #https://stackoverflow.com/questions/33319678/why-is-my-terminal-returning-this-s3-error
+                Sid: AllowListingOfAllBuckets
+                Effect: Allow
+                Action:
+                - s3:ListAllMyBuckets
+                Resource:
+                - arn:aws:s3:::*
 
   #Instance Profile for the EC2 Instance to assume
   MoodleProfile:
