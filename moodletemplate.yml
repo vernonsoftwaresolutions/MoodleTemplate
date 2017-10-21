@@ -655,7 +655,7 @@ Resources:
       - !Ref WSSubnet2
       - !Ref WSSubnet3
       Instances:
-      - Ref: MoodleInstance
+      - Ref: MoodleEC2Instance
       Listeners:
       - LoadBalancerPort: '80'
         InstancePort: '80'
@@ -665,7 +665,7 @@ Resources:
       - Key: ENV
         Value: PROD
 
-  MoodleInstance: 
+  MoodleEC2Instance: 
     Type: "AWS::EC2::Instance"
     Properties: 
       ImageId:
@@ -792,8 +792,9 @@ Resources:
               -
                 Effect: "Allow"
                 Action: "s3:ListObjects"
-                Resource:
-                  !Sub arn:aws:s3:::${CertBucket}/*
+                #todo-this just seems wrong to me
+                # from https://forums.aws.amazon.com/message.jspa?messageID=701604
+                Resource: "*"
               -
                 Effect: "Allow"
                 Action: "s3:DeleteObject"
