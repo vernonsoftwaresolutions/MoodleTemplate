@@ -635,8 +635,6 @@ Resources:
   MoodleLoadBalancer:
     Type: AWS::ElasticLoadBalancing::LoadBalancer
     Properties:
-      SSLCertificateId:
-        Ref: MoodleCertificate
       SecurityGroups:
       - !Ref WebAccessSecurityGroup
       - !Ref WorldAccessSecurityGroup
@@ -650,6 +648,8 @@ Resources:
         InstancePort: '80'
         Protocol: TCP
         InstanceProtocol: TCP
+        SSLCertificateId:
+          Ref: MoodleCertificate
       Tags:
       - Key: ENV
         Value: PROD
