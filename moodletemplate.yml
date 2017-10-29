@@ -742,6 +742,15 @@ Resources:
           tail -F /var/log/apache2/* &
           exec apache2 -D FOREGROUND
 
+          echo "about to create cron job"
+          #write out current crontab
+          crontab -l > moodlecron
+          #echo new cron into cron file to run every minute
+          echo "*/1 * * * * /usr/bin/php  /path/to/moodle/admin/cli/cron.php >/dev/null" >> moodlecron
+          #install new cron file
+          crontab moodlecron
+          rm moodlecron
+
   CertS3Role:
     Type: "AWS::IAM::Role"
     Properties:
