@@ -633,7 +633,7 @@ Resources:
       - !Ref WSSubnet2
       - !Ref WSSubnet3
       Instances:
-      - Ref: MoodleEC2Instance
+      - Ref: MoodleInstance
       Listeners:
       - LoadBalancerPort: '80'
         InstancePort: '80'
@@ -643,7 +643,7 @@ Resources:
       - Key: ENV
         Value: PROD
 
-  MoodleEC2Instance: 
+  MoodleInstance: 
     Type: "AWS::EC2::Instance"
     Properties: 
       ImageId:
@@ -734,7 +734,11 @@ Resources:
           sudo sed -ie "s/<WWWROOT>/${MoodleDNSName}/" /var/www/html/config.php
           sudo sed -ie "s/<MEMCACHED_URL_PORT>/${ElasticacheCluster.ConfigurationEndpoint.Address}:${ElasticacheCluster.ConfigurationEndpoint.Port}/" /var/www/html/config.php
 
-
+          
+          echo "about to create cron job"
+          #One liner to create cron job
+          (crontab -l 2>/dev/null; echo "*/1 * * * * /usr/bin/php  /var/www/html/admin/cli/cron.php >/dev/null") | crontab -
+          
           read pid cmd state ppid pgrp session tty_nr tpgid rest < /proc/self/stat
           trap "kill -TERM -$pgrp; exit" EXIT TERM KILL SIGKILL SIGTERM SIGQUIT
 
@@ -742,14 +746,7 @@ Resources:
           tail -F /var/log/apache2/* &
           exec apache2 -D FOREGROUND
 
-          echo "about to create cron job"
-          #write out current crontab
-          crontab -l > moodlecron
-          #echo new cron into cron file to run every minute
-          echo "*/1 * * * * /usr/bin/php  /path/to/moodle/admin/cli/cron.php >/dev/null" >> moodlecron
-          #install new cron file
-          crontab moodlecron
-          rm moodlecron
+          
 
   CertS3Role:
     Type: "AWS::IAM::Role"
