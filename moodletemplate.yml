@@ -633,7 +633,7 @@ Resources:
       - !Ref WSSubnet2
       - !Ref WSSubnet3
       Instances:
-      - Ref: MoodleInstance
+      - Ref: MoodleECSInstance
       Listeners:
       - LoadBalancerPort: '80'
         InstancePort: '80'
@@ -643,7 +643,7 @@ Resources:
       - Key: ENV
         Value: PROD
 
-  MoodleInstance: 
+  MoodleECSInstance: 
     Type: "AWS::EC2::Instance"
     Properties: 
       ImageId:
@@ -904,7 +904,7 @@ Resources:
           Fn::GetAtt:
             - "MemcachedSecurityGroup"
             - "GroupId"
-            
+
   MemcachedSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
