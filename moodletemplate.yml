@@ -632,8 +632,6 @@ Resources:
       - !Ref WSSubnet1
       - !Ref WSSubnet2
       - !Ref WSSubnet3
-      Instances:
-      - Ref: MoodleECSInstance
       Listeners:
       - LoadBalancerPort: '80'
         InstancePort: '80'
@@ -642,111 +640,136 @@ Resources:
       Tags:
       - Key: ENV
         Value: PROD
-
-  MoodleECSInstance: 
-    Type: "AWS::EC2::Instance"
-    Properties: 
-      ImageId:
-        !FindInMap [ ImageMap, !Ref "AWS::Region", ami ]
+  ##
+  # Launch configuration to describe moodle installation
+  ##
+  MoodleLaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      AssociatePublicIpAddress: "true"
       KeyName:
         Ref: KeyName
-      InstanceType:
-        Ref: InstanceType
-      NetworkInterfaces:
-        - AssociatePublicIpAddress: "true"
-          DeviceIndex: "0"
-          GroupSet:
-            - !Ref EFSSecurityGroup
-            - !Ref MemcachedSecurityGroup
-            - !Ref WebAccessSecurityGroup
-            - !Ref DBAccessSecurityGroup
-          SubnetId:
-            Ref: WSSubnet1
-      IamInstanceProfile:
-        Ref: MoodleProfile
+      ImageId:
+        !FindInMap [ ImageMap, !Ref "AWS::Region", ami ]
+      # todo- externalize external-url
+      # todo- move passwords to s3
       UserData:
         "Fn::Base64":
           !Sub |
-          #!/bin/bash
+            #!/bin/bash
+            #### MOUNT EFS
+            echo "mounting efs"
+            sudo apt-get -y install nfs-common
+            mkdir -p /var/moodledata
+            chown -R www-data:www-data /var/moodledata
+            chmod -R 777 /var/moodledata
 
+            echo "${FileSystem}.efs.${AWS::Region}.amazonaws.com:/ /var/moodledata nfs4 nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 0 0" >> /etc/fstab
+            mount -a -t nfs4
+            #todo-refactor, bad
+            sudo chmod 777 /var/moodledata/
+            echo "efs mounting complete"
 
-          #### MOUNT EFS
-          echo "mounting efs"
-          sudo apt-get -y install nfs-common
-          mkdir -p /var/moodledata
-          chown -R www-data:www-data /var/moodledata
-          chmod -R 777 /var/moodledata
-
-          echo "${FileSystem}.efs.${AWS::Region}.amazonaws.com:/ /var/moodledata nfs4 nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 0 0" >> /etc/fstab
-          mount -a -t nfs4
-          #todo-refactor, bad
-          sudo chmod 777 /var/moodledata/
-          echo "efs mounting complete"
-
-          # Keep upstart from complaining
-          # RUN dpkg-divert --local --rename --add /sbin/initctl
-          # RUN ln -sf /bin/true /sbin/initctl
-          #todo- REFACTOR THIS DON'T WANT THIS PERMISSIONS!!
-          chmod 755 /var/www
-          chown apache2 /var/www
-         
-          # Let the container know that there is no tty
-          export DEBIAN_FRONTEND=noninteractive
-
-          set -x
-          ENV_FILE=/root/env.sh
-          echo "In the userdata script"
-          mkdir -p `dirname $ENV_FILE`
-          cat << EOF > $ENV_FILE
-       
-          export IMAGE_BUCKET=ElastixData
-          export OUTPUT_BUCKET=regdata0813
-          EOF
-          chmod +x $ENV_FILE
-         
-          #ADD ./foreground.sh /etc/apache2/foreground.sh
-
-          apt-get update && \
-            apt-get -y install mysql-client pwgen python-setuptools curl git unzip apache2 php5 \
-              php5-gd libapache2-mod-php5 postfix wget supervisor php5-pgsql curl libcurl3 php5-memcached memcached \
-              libcurl3-dev php5-curl php5-xmlrpc php5-intl php5-mysql git-core && \
-            cd /tmp && \
-            git clone -b MOODLE_29_STABLE git://git.moodle.org/moodle.git --depth=1 && \
-            #todo MOODLE_33_STABLE
-            mv /tmp/moodle/* /var/www/html/ && \
-            rm /var/www/html/index.html && \
-            chown -R www-data:www-data /var/www/html && \
-          #	chmod +x /etc/apache2/foreground.sh
-          #todo- REFACTOR THIS DON'T WANT THIS PERMISSIONS!!
-          chmod 777 /var/www
-          # Enable SSL, moodle requires it
-          a2enmod ssl && a2ensite default-ssl 
-          # if using proxy, don't need actually secure connection          
-          #use sed to make config configuration
-          sudo apt-get install python-pip -y
-          sudo pip install awscli
-          sudo aws s3 cp s3://moodle-deployables/config.php /var/www/html/config.php --region us-west-2
-
-          sudo sed -ie "s/<DATABASEURL>/${RDSDB.Endpoint.Address}/" /var/www/html/config.php 
-          sudo sed -ie "s/<DATABASENAME>/${DBName}/" /var/www/html/config.php
-          sudo sed -ie "s/<DATABASEUSER>/${DBMasterUser}/" /var/www/html/config.php
-          sudo sed -ie "s/<DATABASEPASSWORD>/${DBMasterPassword}/" /var/www/html/config.php
-          sudo sed -ie "s/<WWWROOT>/${MoodleDNSName}/" /var/www/html/config.php
-          sudo sed -ie "s/<MEMCACHED_URL_PORT>/${SessionElasticacheCluster.ConfigurationEndpoint.Address}:${SessionElasticacheCluster.ConfigurationEndpoint.Port}/" /var/www/html/config.php
-
+            # Keep upstart from complaining
+            # RUN dpkg-divert --local --rename --add /sbin/initctl
+            # RUN ln -sf /bin/true /sbin/initctl
+            #todo- REFACTOR THIS DON'T WANT THIS PERMISSIONS!!
+            chmod 755 /var/www
+            chown apache2 /var/www
           
-          echo "about to create cron job"
-          #One liner to create cron job
-          (crontab -l 2>/dev/null; echo "*/1 * * * * /usr/bin/php  /var/www/html/admin/cli/cron.php >/dev/null") | crontab -
-          
-          read pid cmd state ppid pgrp session tty_nr tpgid rest < /proc/self/stat
-          trap "kill -TERM -$pgrp; exit" EXIT TERM KILL SIGKILL SIGTERM SIGQUIT
+            # Let the container know that there is no tty
+            export DEBIAN_FRONTEND=noninteractive
 
-          source /etc/apache2/envvars
-          tail -F /var/log/apache2/* &
-          exec apache2 -D FOREGROUND
-
+            set -x
+            ENV_FILE=/root/env.sh
+            echo "In the userdata script"
+            mkdir -p `dirname $ENV_FILE`
+            cat << EOF > $ENV_FILE
+        
+            export IMAGE_BUCKET=ElastixData
+            export OUTPUT_BUCKET=regdata0813
+            EOF
+            chmod +x $ENV_FILE
           
+            #ADD ./foreground.sh /etc/apache2/foreground.sh
+
+            apt-get update && \
+              apt-get -y install mysql-client pwgen python-setuptools curl git unzip apache2 php5 \
+                php5-gd libapache2-mod-php5 postfix wget supervisor php5-pgsql curl libcurl3 php5-memcached memcached \
+                libcurl3-dev php5-curl php5-xmlrpc php5-intl php5-mysql git-core && \
+              cd /tmp && \
+              git clone -b MOODLE_29_STABLE git://git.moodle.org/moodle.git --depth=1 && \
+              #todo MOODLE_33_STABLE
+              mv /tmp/moodle/* /var/www/html/ && \
+              rm /var/www/html/index.html && \
+              chown -R www-data:www-data /var/www/html && \
+            #	chmod +x /etc/apache2/foreground.sh
+            #todo- REFACTOR THIS DON'T WANT THIS PERMISSIONS!!
+            chmod 777 /var/www
+            # Enable SSL, moodle requires it
+            a2enmod ssl && a2ensite default-ssl 
+            # if using proxy, don't need actually secure connection          
+            #use sed to make config configuration
+            sudo apt-get install python-pip -y
+            sudo pip install awscli
+            sudo aws s3 cp s3://moodle-deployables/config.php /var/www/html/config.php --region us-west-2
+
+            sudo sed -ie "s/<DATABASEURL>/${RDSDB.Endpoint.Address}/" /var/www/html/config.php 
+            sudo sed -ie "s/<DATABASENAME>/${DBName}/" /var/www/html/config.php
+            sudo sed -ie "s/<DATABASEUSER>/${DBMasterUser}/" /var/www/html/config.php
+            sudo sed -ie "s/<DATABASEPASSWORD>/${DBMasterPassword}/" /var/www/html/config.php
+            sudo sed -ie "s/<WWWROOT>/${MoodleDNSName}/" /var/www/html/config.php
+            sudo sed -ie "s/<MEMCACHED_URL_PORT>/${SessionElasticacheCluster.ConfigurationEndpoint.Address}:${SessionElasticacheCluster.ConfigurationEndpoint.Port}/" /var/www/html/config.php
+
+            
+            echo "about to create cron job"
+            #One liner to create cron job
+            (crontab -l 2>/dev/null; echo "*/1 * * * * /usr/bin/php  /var/www/html/admin/cli/cron.php >/dev/null") | crontab -
+            
+            read pid cmd state ppid pgrp session tty_nr tpgid rest < /proc/self/stat
+            trap "kill -TERM -$pgrp; exit" EXIT TERM KILL SIGKILL SIGTERM SIGQUIT
+
+            source /etc/apache2/envvars
+            tail -F /var/log/apache2/* &
+            exec apache2 -D FOREGROUND
+
+      SecurityGroups:
+        - !Ref EFSSecurityGroup
+        - !Ref MemcachedSecurityGroup
+        - !Ref WebAccessSecurityGroup
+        - !Ref DBAccessSecurityGroup
+      InstanceType:
+        Ref: InstanceType
+      IamInstanceProfile:
+        Ref: MoodleProfile
+
+  #DTR autoscaling group
+  ApplicationAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        SuspendProcesses:
+        - Terminate
+        - ReplaceUnhealthy
+    Properties:
+      AvailabilityZones:
+        Fn::GetAZs:
+          Ref: "AWS::Region"
+      VPCZoneIdentifier:
+        - !Ref WSSubnet1
+        - !Ref WSSubnet2
+        - !Ref WSSubnet3
+      LaunchConfigurationName:
+        Ref: MoodleLaunchConfig
+      MinSize: 2
+      MaxSize: 2
+      LoadBalancerNames:
+        - Ref: MoodleLoadBalancer
+      Tags:
+          - Key: ENV
+            Value: PROD
+            PropagateAtLaunch: 'true'
+            
 
   CertS3Role:
     Type: "AWS::IAM::Role"
