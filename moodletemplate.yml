@@ -732,7 +732,7 @@ Resources:
           sudo sed -ie "s/<DATABASEUSER>/${DBMasterUser}/" /var/www/html/config.php
           sudo sed -ie "s/<DATABASEPASSWORD>/${DBMasterPassword}/" /var/www/html/config.php
           sudo sed -ie "s/<WWWROOT>/${MoodleDNSName}/" /var/www/html/config.php
-          sudo sed -ie "s/<MEMCACHED_URL_PORT>/${ElasticacheCluster.ConfigurationEndpoint.Address}:${ElasticacheCluster.ConfigurationEndpoint.Port}/" /var/www/html/config.php
+          sudo sed -ie "s/<MEMCACHED_URL_PORT>/${SessionElasticacheCluster.ConfigurationEndpoint.Address}:${SessionElasticacheCluster.ConfigurationEndpoint.Port}/" /var/www/html/config.php
 
           
           echo "about to create cron job"
@@ -873,7 +873,7 @@ Resources:
       SubnetIds:
       - Ref: MCSubnet1
 
-  ElasticacheCluster:
+  SessionElasticacheCluster:
     Type: AWS::ElastiCache::CacheCluster
     Properties:
       AutoMinorVersionUpgrade: true
@@ -887,7 +887,24 @@ Resources:
           Fn::GetAtt:
             - "MemcachedSecurityGroup"
             - "GroupId"
-
+  ##
+  # Elastic cache instance to cache MUC data (not go to the shared file system)
+  ##          
+  MUCElasticacheCluster:
+    Type: AWS::ElastiCache::CacheCluster
+    Properties:
+      AutoMinorVersionUpgrade: true
+      Engine: memcached
+      CacheNodeType: cache.t2.micro
+      CacheSubnetGroupName:
+        Ref: ECSubnetGroup
+      NumCacheNodes: 1
+      VpcSecurityGroupIds:
+        -
+          Fn::GetAtt:
+            - "MemcachedSecurityGroup"
+            - "GroupId"
+            
   MemcachedSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -1020,7 +1037,7 @@ Outputs:
     Value: !Ref FileSystem
   # CacheEndpoint:
   #   Description: Endpoint for memcached instance
-  #   Value: !GetAtt ElasticacheCluster.ConfigurationEndpoint.Address
+  #   Value: !GetAtt SessionElasticacheCluster.ConfigurationEndpoint.Address
   # CachePort:
   #   Description: Endpoint for memcached instance
-  #   Value: !GetAtt ElasticacheCluster.ConfigurationEndpoint.Port
+  #   Value: !GetAtt SessionElasticacheCluster.ConfigurationEndpoint.Port
