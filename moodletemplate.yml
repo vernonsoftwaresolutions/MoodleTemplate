@@ -1,5 +1,5 @@
 # aws cloudformation package --template-file moodletemplate.yaml --output-template-file moodletemplate-output.yaml --s3-bucket moodle-deployables
-# aws cloudformation deploy --template-file moodletemplate-output.yaml --capabilities CAPABILITY_IAM --stack-name jenkins --parameter-overrides Tenant=Company! DBInstance=moodle DBName=moodle InstanceType=t2.micro DBIsMultiZone=false KeyName=SANDBOX CertBucket=moodle-deployables HostedZoneName=vssdevelopment.com. MoodleDNSName=moodle.vssdevelopment.com
+# aws cloudformation deploy --template-file moodletemplate-output.yaml --capabilities CAPABILITY_IAM --stack-name moodle --parameter-overrides Tenant=Company! DBInstance=moodle DBName=moodle InstanceType=t2.micro DBIsMultiZone=false KeyName=SANDBOX CertBucket=moodle-deployables HostedZoneName=vssdevelopment.com. MoodleDNSName=moodle.vssdevelopment.com
 
 
 AWSTemplateFormatVersion: '2010-09-09'
@@ -598,8 +598,8 @@ Resources:
       SecurityGroupIngress:
           - CidrIp: 0.0.0.0/0
             IpProtocol: tcp
-            FromPort: 80
-            ToPort: 80
+            FromPort: 443
+            ToPort: 443
       Tags:
         - Key: ENV
           Value: PROD
@@ -621,9 +621,22 @@ Resources:
           HostedZoneId: !GetAtt MoodleLoadBalancer.CanonicalHostedZoneNameID
           DNSName: !GetAtt MoodleLoadBalancer.DNSName
 
+  ##
+  # AWS managed certificate
+  ##
+  MoodleCertificate:
+    Type: AWS::CertificateManager::Certificate
+    Properties:
+      DomainName: 
+        Ref: MoodleDNSName
+  ##
+  # Loadbalancer to distribute traffic across apache web servers
+  ##
   MoodleLoadBalancer:
     Type: AWS::ElasticLoadBalancing::LoadBalancer
     Properties:
+      SSLCertificateId:
+        Ref: MoodleCertificate
       SecurityGroups:
       - !Ref WebAccessSecurityGroup
       - !Ref WorldAccessSecurityGroup
@@ -633,7 +646,7 @@ Resources:
       - !Ref WSSubnet2
       - !Ref WSSubnet3
       Listeners:
-      - LoadBalancerPort: '80'
+      - LoadBalancerPort: '443'
         InstancePort: '80'
         Protocol: TCP
         InstanceProtocol: TCP
@@ -749,8 +762,8 @@ Resources:
     UpdatePolicy:
       AutoScalingRollingUpdate:
         SuspendProcesses:
-        - Terminate
-        - ReplaceUnhealthy
+          - Terminate
+          - ReplaceUnhealthy
     Properties:
       AvailabilityZones:
         Fn::GetAZs:
@@ -787,7 +800,7 @@ Resources:
       Path: "/"
       Policies:
         -
-          PolicyName: "s3JenkinsCertpolicy"
+          PolicyName: "S3MoodleCertpolicy"
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
