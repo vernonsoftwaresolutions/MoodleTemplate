@@ -612,7 +612,7 @@ Resources:
     Properties:
       HostedZoneName:
         Ref: HostedZoneName
-      Comment: Zone apex alias targeted to DockerDTRLoadBalancer.
+      Comment: Zone apex alias targeted to Load Balancer.
       RecordSets:
       - Name:
           !Join [".", [ !Ref MoodleDNSName , ""]]
@@ -646,8 +646,8 @@ Resources:
       Listeners:
       - LoadBalancerPort: '443'
         InstancePort: '80'
-        Protocol: TCP
-        InstanceProtocol: TCP
+        Protocol: HTTPS
+        InstanceProtocol: HTTP
         SSLCertificateId:
           Ref: MoodleCertificate
       Tags:
