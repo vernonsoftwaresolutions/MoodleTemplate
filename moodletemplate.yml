@@ -759,11 +759,11 @@ Resources:
   #DTR autoscaling group
   ApplicationAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
-    UpdatePolicy:
-      AutoScalingRollingUpdate:
-        SuspendProcesses:
-          - Terminate
-          - ReplaceUnhealthy
+  #  UpdatePolicy:
+  #    AutoScalingRollingUpdate:
+  #      SuspendProcesses:
+  #        - Terminate
+  #        - ReplaceUnhealthy
     Properties:
       AvailabilityZones:
         Fn::GetAZs:
