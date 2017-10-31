@@ -261,7 +261,7 @@ $CFG->session_memcached_lock_expire = 7200;
 // Uncomment and customise this block for Postfix
 //      $CFG->mailprefix = 'mdl+'; // + is the separator for Exim and Postfix.
 //      $CFG->mailprefix = 'mdl-'; // - is the separator for qmail
-//      $CFG->maildomain = 'youremaildomain.com';
+$CFG->maildomain = '<WWWROOT>';
 //
 // Enable when setting up advanced reverse proxy load balancing configurations,
 // it may be also necessary to enable this when using port forwarding.
