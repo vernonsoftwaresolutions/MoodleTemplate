@@ -656,7 +656,7 @@ Resources:
   ##
   # Launch configuration to describe moodle installation
   ##
-  MoodleLaunchConfig:
+  MoodleLaunchConfiguration:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
       AssociatePublicIpAddress: "true"
@@ -679,7 +679,9 @@ Resources:
             php7.0 libapache2-mod-php7.0 php7.0-pspell php7.0-curl \
             php7.0-gd php7.0-intl php7.0-mysql php7.0-xml php7.0-xmlrpc \
             php7.0-ldap php7.0-zip php7.0-soap php7.0-mbstring php-memcached
-
+            ##add extenstion
+            echo "adding extension"
+            echo 'extension=zip.so' >> /etc/php/7.0/apache2/php.ini 
             #### MOUNT EFS
             echo "mounting efs"
             sudo apt-get -y install nfs-common
@@ -762,7 +764,7 @@ Resources:
         Ref: MoodleProfile
 
   #DTR autoscaling group
-  MoodleScalingGroup:
+  MoodleAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
   #  UpdatePolicy:
   #    AutoScalingRollingUpdate:
@@ -778,7 +780,7 @@ Resources:
         - !Ref WSSubnet2
         - !Ref WSSubnet3
       LaunchConfigurationName:
-        Ref: MoodleLaunchConfig
+        Ref: MoodleLaunchConfiguration
       MinSize: 2
       MaxSize: 2
       LoadBalancerNames:
