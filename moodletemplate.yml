@@ -682,6 +682,7 @@ Resources:
             ##add extenstion
             echo "adding extension"
             echo 'extension=zip.so' >> /etc/php/7.0/apache2/php.ini 
+            service apache2 restart
             #### MOUNT EFS
             echo "mounting efs"
             sudo apt-get -y install nfs-common
