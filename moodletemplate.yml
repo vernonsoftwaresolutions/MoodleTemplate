@@ -706,10 +706,10 @@ Resources:
           
             #ADD ./foreground.sh /etc/apache2/foreground.sh
             apt-get -y install \
-              sudo apache2 graphviz aspell \
-              php7.0 libapache2-mod-php7.0 php7.0-pspell php7.0-curl \
-              php7.0-gd php7.0-intl php7.0-mysql php7.0-xml php7.0-xmlrpc \
-              php7.0-ldap php7.0-zip php7.0-soap php7.0-mbstring php7-memcached memcached 
+            sudo apache2 graphviz aspell \
+            php7.0 libapache2-mod-php7.0 php7.0-pspell php7.0-curl \
+            php7.0-gd php7.0-intl php7.0-mysql php7.0-xml php7.0-xmlrpc \
+            php7.0-ldap php7.0-zip php7.0-soap php7.0-mbstring php7-memcached memcached 
 
             cd /tmp && \
             git clone -b MOODLE_33_STABLE git://git.moodle.org/moodle.git --depth=1 && \
@@ -721,9 +721,10 @@ Resources:
             #todo- REFACTOR THIS DON'T WANT THIS PERMISSIONS!!
             chmod 777 /var/www
             # Enable SSL, moodle requires it
-          #  a2enmod ssl && a2ensite default-ssl 
+            #  a2enmod ssl && a2ensite default-ssl 
             # if using proxy, don't need actually secure connection          
             #use sed to make config configuration
+
             sudo apt-get install python-pip -y
             sudo pip install awscli
             sudo aws s3 cp s3://moodle-deployables/config.php /var/www/html/config.php --region us-west-2
