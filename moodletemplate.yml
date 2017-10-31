@@ -656,7 +656,7 @@ Resources:
   ##
   # Launch configuration to describe moodle installation
   ##
-  MoodleLaunchConfiguration:
+  MoodleLaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
       AssociatePublicIpAddress: "true"
@@ -670,6 +670,16 @@ Resources:
         "Fn::Base64":
           !Sub |
             #!/bin/bash
+            echo "install moodle requirements"
+
+            sudo apt-get update
+
+            apt-get -y install \
+            sudo apache2 graphviz aspell \
+            php7.0 libapache2-mod-php7.0 php7.0-pspell php7.0-curl \
+            php7.0-gd php7.0-intl php7.0-mysql php7.0-xml php7.0-xmlrpc \
+            php7.0-ldap php7.0-zip php7.0-soap php7.0-mbstring php-memcached
+
             #### MOUNT EFS
             echo "mounting efs"
             sudo apt-get -y install nfs-common
@@ -703,13 +713,6 @@ Resources:
             export OUTPUT_BUCKET=regdata0813
             EOF
             chmod +x $ENV_FILE
-          
-            #ADD ./foreground.sh /etc/apache2/foreground.sh
-            apt-get -y install \
-            sudo apache2 graphviz aspell \
-            php7.0 libapache2-mod-php7.0 php7.0-pspell php7.0-curl \
-            php7.0-gd php7.0-intl php7.0-mysql php7.0-xml php7.0-xmlrpc \
-            php7.0-ldap php7.0-zip php7.0-soap php7.0-mbstring php7-memcached memcached 
 
             cd /tmp && \
             git clone -b MOODLE_33_STABLE git://git.moodle.org/moodle.git --depth=1 && \
@@ -759,7 +762,7 @@ Resources:
         Ref: MoodleProfile
 
   #DTR autoscaling group
-  MoodleAutoScalingGroup:
+  MoodleScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
   #  UpdatePolicy:
   #    AutoScalingRollingUpdate:
@@ -775,7 +778,7 @@ Resources:
         - !Ref WSSubnet2
         - !Ref WSSubnet3
       LaunchConfigurationName:
-        Ref: MoodleLaunchConfiguration
+        Ref: MoodleLaunchConfig
       MinSize: 2
       MaxSize: 2
       LoadBalancerNames:
