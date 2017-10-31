@@ -11,4 +11,3 @@ Step2: Update name of AWS::EC2::Instance resource
 Step3: Update any other reference to AWS::EC2::Instance resource, for instance AWS::ElasticLoadBalancing::LoadBalancer  
 ***Pro-tip.  Step 2 and 3 can be done with a simple find and replace =O***
 
-triggering build
