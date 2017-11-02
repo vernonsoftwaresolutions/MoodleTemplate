@@ -682,7 +682,6 @@ Resources:
             ##add extenstion
             echo "adding extension"
             echo 'extension=zip.so' >> /etc/php/7.0/apache2/php.ini 
-            service apache2 restart
             #### MOUNT EFS
             echo "mounting efs"
             sudo apt-get -y install nfs-common
@@ -718,7 +717,7 @@ Resources:
             chmod +x $ENV_FILE
 
             cd /tmp && \
-            git clone -b MOODLE_33_STABLE git://git.moodle.org/moodle.git --depth=1 && \
+            git clone -b MOODLE_32_STABLE git://git.moodle.org/moodle.git --depth=1 && \
             #todo MOODLE_33_STABLE
             mv /tmp/moodle/* /var/www/html/ && \
             rm /var/www/html/index.html && \
@@ -742,7 +741,8 @@ Resources:
             sudo sed -ie "s/<WWWROOT>/${MoodleDNSName}/" /var/www/html/config.php
             sudo sed -ie "s/<MEMCACHED_URL_PORT>/${SessionElasticacheCluster.ConfigurationEndpoint.Address}:${SessionElasticacheCluster.ConfigurationEndpoint.Port}/" /var/www/html/config.php
 
-            
+            echo "restarting apache2"
+            service apache2 restart
             echo "about to create cron job"
             #One liner to create cron job
             (crontab -l 2>/dev/null; echo "*/1 * * * * /usr/bin/php  /var/www/html/admin/cli/cron.php >/dev/null") | crontab -
