@@ -720,7 +720,7 @@ Resources:
             chmod +x $ENV_FILE
 
             cd /tmp && \
-            git clone -b MOODLE_32_STABLE git://git.moodle.org/moodle.git --depth=1 && \
+            git clone -b MOODLE_33_STABLE git://git.moodle.org/moodle.git --depth=1 && \
             #todo MOODLE_33_STABLE
             mv /tmp/moodle/* /var/www/html/ && \
             rm /var/www/html/index.html && \
