@@ -671,17 +671,27 @@ Resources:
           !Sub |
             #!/bin/bash
             echo "install moodle requirements"
-            sudo apt-get update
-            sudo apt-get install apache2 mysql-client php7.0 libapache2-mod-php7.0 -y
 
-            sudo apt-get install graphviz aspell php7.0-pspell php7.0-curl php7.0-gd php7.0-intl php7.0-mysql php7.0-xml php7.0-xmlrpc php7.0-ldap php7.0-zip
+            ADD ./foreground.sh /etc/apache2/foreground.sh
+
+            sudo apt-get update && \
+            #commented out below line to mimick dockerfile config online
+            #sudo apt-get install apache2 mysql-client php7.0 libapache2-mod-php7.0 -y
+
+            #unsure how to split a command across multiple lines in yaml - but mimicking dockerfile config found online
+            sudo apt-get -y install mysql-client pwgen python-setuptools curl git unzip apache2 php \
+            php-gd libapache2-mod-php postfix wget supervisor php-pgsql curl libcurl3 \
+            libcurl3-dev php-curl php-xmlrpc php-intl php-mysql git-core php-xml php-mbstring php-zip php-soap && \
+
+            #commented out below line to mimick dockerfile config online
+            #sudo apt-get install graphviz aspell php7.0-pspell php7.0-curl php7.0-gd php7.0-intl php7.0-mysql php7.0-xml php7.0-xmlrpc php7.0-ldap php7.0-zip
             #sudo apt-get update
 
             #apt-get -y install \
             #sudo apache2 graphviz aspell \
             #php7.0 libapache2-mod-php7.0 php7.0-pspell php7.0-curl \
             #php7.0-gd php7.0-intl php7.0-mysql php7.0-xml php7.0-xmlrpc \
-            #php7.0-ldap php7.0-zip php7.0-soap php7.0-mbstring php-memcached
+            #php7.0-ldap php7.0-zip php7.0-soap php7.0-addmbstring php-memcached
             ##add extenstion
             echo "adding extension"
             echo 'extension=zip.so' >> /etc/php/7.0/apache2/php.ini 
@@ -725,7 +735,7 @@ Resources:
             mv /tmp/moodle/* /var/www/html/ && \
             rm /var/www/html/index.html && \
             chown -R www-data:www-data /var/www/html && \
-            #	chmod +x /etc/apache2/foreground.sh
+            chmod +x /etc/apache2/foreground.sh
             #todo- REFACTOR THIS DON'T WANT THIS PERMISSIONS!!
             chmod 777 /var/www
             # Enable SSL, moodle requires it
