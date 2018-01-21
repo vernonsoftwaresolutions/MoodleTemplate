@@ -20,7 +20,7 @@ test:
     
 deployment:
   development:
-    branch: master
+    branch: revert-commit
     commands:
           - sh ./deploy.sh:
               timeout: 2400
