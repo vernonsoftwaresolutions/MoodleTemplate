@@ -9,7 +9,7 @@ Mappings:
     us-east-1:
       ami: ami-841f46ff
     us-west-2:
-      ami: ami-6e1a0117
+      ami: ami-718c6909
   RegionMap:
     us-east-1:
       AZ1: us-east-1a
@@ -612,7 +612,7 @@ Resources:
     Properties:
       HostedZoneName:
         Ref: HostedZoneName
-      Comment: Zone apex alias targeted to Load Balancer.
+      Comment: Zone apex alias targeted to DockerDTRLoadBalancer.
       RecordSets:
       - Name:
           !Join [".", [ !Ref MoodleDNSName , ""]]
@@ -646,8 +646,8 @@ Resources:
       Listeners:
       - LoadBalancerPort: '443'
         InstancePort: '80'
-        Protocol: HTTPS
-        InstanceProtocol: HTTP
+        Protocol: TCP
+        InstanceProtocol: TCP
         SSLCertificateId:
           Ref: MoodleCertificate
       Tags:
@@ -656,7 +656,7 @@ Resources:
   ##
   # Launch configuration to describe moodle installation
   ##
-  MoodleLaunchConfiguration:
+  MoodleLaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
       AssociatePublicIpAddress: "true"
@@ -670,19 +670,6 @@ Resources:
         "Fn::Base64":
           !Sub |
             #!/bin/bash
-            echo "install moodle requirements"
-
-            sudo apt-get update
-
-            apt-get -y install \
-            sudo apache2 graphviz aspell \
-            php7.0 libapache2-mod-php7.0 php7.0-pspell php7.0-curl \
-            php7.0-gd php7.0-intl php7.0-mysql php7.0-xml php7.0-xmlrpc \
-            php7.0-ldap php7.0-zip php7.0-soap php7.0-mbstring php-memcached
-            ##add extenstion
-            echo "adding extension"
-            echo 'extension=zip.so' >> /etc/php/7.0/apache2/php.ini 
-            service apache2 restart
             #### MOUNT EFS
             echo "mounting efs"
             sudo apt-get -y install nfs-common
@@ -716,21 +703,26 @@ Resources:
             export OUTPUT_BUCKET=regdata0813
             EOF
             chmod +x $ENV_FILE
+          
+            #ADD ./foreground.sh /etc/apache2/foreground.sh
 
-            cd /tmp && \
-            git clone -b MOODLE_33_STABLE git://git.moodle.org/moodle.git --depth=1 && \
-            #todo MOODLE_33_STABLE
-            mv /tmp/moodle/* /var/www/html/ && \
-            rm /var/www/html/index.html && \
-            chown -R www-data:www-data /var/www/html && \
+            apt-get update && \
+              apt-get -y install mysql-client pwgen python-setuptools curl git unzip apache2 php5 \
+                php5-gd libapache2-mod-php5 postfix wget supervisor php5-pgsql curl libcurl3 php5-memcached memcached \
+                libcurl3-dev php5-curl php5-xmlrpc php5-intl php5-mysql git-core && \
+              cd /tmp && \
+              git clone -b MOODLE_29_STABLE git://git.moodle.org/moodle.git --depth=1 && \
+              #todo MOODLE_33_STABLE
+              mv /tmp/moodle/* /var/www/html/ && \
+              rm /var/www/html/index.html && \
+              chown -R www-data:www-data /var/www/html && \
             #	chmod +x /etc/apache2/foreground.sh
             #todo- REFACTOR THIS DON'T WANT THIS PERMISSIONS!!
             chmod 777 /var/www
             # Enable SSL, moodle requires it
-            #  a2enmod ssl && a2ensite default-ssl 
+            a2enmod ssl && a2ensite default-ssl 
             # if using proxy, don't need actually secure connection          
             #use sed to make config configuration
-
             sudo apt-get install python-pip -y
             sudo pip install awscli
             sudo aws s3 cp s3://moodle-deployables/config.php /var/www/html/config.php --region us-west-2
@@ -765,13 +757,13 @@ Resources:
         Ref: MoodleProfile
 
   #DTR autoscaling group
-  MoodleAutoScalingGroup:
+  ApplicationAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
-  #  UpdatePolicy:
-  #    AutoScalingRollingUpdate:
-  #      SuspendProcesses:
-  #        - Terminate
-  #        - ReplaceUnhealthy
+    UpdatePolicy:
+      AutoScalingRollingUpdate:
+        SuspendProcesses:
+          - Terminate
+          - ReplaceUnhealthy
     Properties:
       AvailabilityZones:
         Fn::GetAZs:
@@ -781,7 +773,7 @@ Resources:
         - !Ref WSSubnet2
         - !Ref WSSubnet3
       LaunchConfigurationName:
-        Ref: MoodleLaunchConfiguration
+        Ref: MoodleLaunchConfig
       MinSize: 2
       MaxSize: 2
       LoadBalancerNames:
