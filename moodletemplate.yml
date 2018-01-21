@@ -1,5 +1,5 @@
 # aws cloudformation package --template-file moodletemplate.yaml --output-template-file moodletemplate-output.yaml --s3-bucket moodle-deployables
-# aws cloudformation deploy --template-file moodletemplate-output.yaml --capabilities CAPABILITY_IAM --stack-name moodle --parameter-overrides Tenant=Company! DBInstance=moodle DBName=moodle InstanceType=t2.micro DBIsMultiZone=false KeyName=SANDBOX CertBucket=moodle-deployables HostedZoneName=vssdevelopment.com. MoodleDNSName=moodle.vssdevelopment.com
+# aws cloudformation deploy --template-file moodletemplate-output.yaml --capabilities CAPABILITY_IAM --stack-name jenkins --parameter-overrides Tenant=Company! DBInstance=moodle DBName=moodle InstanceType=t2.micro DBIsMultiZone=false KeyName=SANDBOX CertBucket=moodle-deployables HostedZoneName=vssdevelopment.com. MoodleDNSName=moodle.vssdevelopment.com
 
 
 AWSTemplateFormatVersion: '2010-09-09'
@@ -9,7 +9,7 @@ Mappings:
     us-east-1:
       ami: ami-841f46ff
     us-west-2:
-      ami: ami-6e1a0117
+      ami: ami-718c6909
   RegionMap:
     us-east-1:
       AZ1: us-east-1a
@@ -589,388 +589,6 @@ Resources:
       SourceSecurityGroupId:
         Ref: WebAccessSecurityGroup
 
-  WorldAccessSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupName: WorldAccessSecurityGroup
-      GroupDescription: Security Group for Web Access to Moodle ELB
-      #World accessible
-      SecurityGroupIngress:
-          - CidrIp: 0.0.0.0/0
-            IpProtocol: tcp
-            FromPort: 443
-            ToPort: 443
-      Tags:
-        - Key: ENV
-          Value: PROD
-      VpcId:
-        Ref: VPC
-
- # Elastic Load Balancer Defintiion for Moodle
-  MoodleDNS:
-    Type: AWS::Route53::RecordSetGroup
-    Properties:
-      HostedZoneName:
-        Ref: HostedZoneName
-      Comment: Zone apex alias targeted to Load Balancer.
-      RecordSets:
-      - Name:
-          !Join [".", [ !Ref MoodleDNSName , ""]]
-        Type: A
-        AliasTarget:
-          HostedZoneId: !GetAtt MoodleLoadBalancer.CanonicalHostedZoneNameID
-          DNSName: !GetAtt MoodleLoadBalancer.DNSName
-
-  ##
-  # AWS managed certificate
-  ##
-  MoodleCertificate:
-    Type: AWS::CertificateManager::Certificate
-    Properties:
-      DomainName: 
-        Ref: MoodleDNSName
-  ##
-  # Loadbalancer to distribute traffic across apache web servers
-  ##
-  MoodleLoadBalancer:
-    Type: AWS::ElasticLoadBalancing::LoadBalancer
-    Properties:
-      SecurityGroups:
-      - !Ref WebAccessSecurityGroup
-      - !Ref WorldAccessSecurityGroup
-      Scheme: internet-facing
-      Subnets:
-      - !Ref WSSubnet1
-      - !Ref WSSubnet2
-      - !Ref WSSubnet3
-      Listeners:
-      - LoadBalancerPort: '443'
-        InstancePort: '80'
-        Protocol: HTTPS
-        InstanceProtocol: HTTP
-        SSLCertificateId:
-          Ref: MoodleCertificate
-      Tags:
-      - Key: ENV
-        Value: PROD
-  ##
-  # Launch configuration to describe moodle installation
-  ##
-  MoodleLaunchConfiguration:
-    Type: AWS::AutoScaling::LaunchConfiguration
-    Properties:
-      AssociatePublicIpAddress: "true"
-      KeyName:
-        Ref: KeyName
-      ImageId:
-        !FindInMap [ ImageMap, !Ref "AWS::Region", ami ]
-      # todo- externalize external-url
-      # todo- move passwords to s3
-      UserData:
-        "Fn::Base64":
-          !Sub |
-            #!/bin/bash
-            echo "install moodle requirements"
-
-            sudo apt-get update
-
-            apt-get -y install \
-            sudo apache2 graphviz aspell \
-            php7.0 libapache2-mod-php7.0 php7.0-pspell php7.0-curl \
-            php7.0-gd php7.0-intl php7.0-mysql php7.0-xml php7.0-xmlrpc \
-            php7.0-ldap php7.0-zip php7.0-soap php7.0-mbstring php-memcached
-            ##add extenstion
-            echo "adding extension"
-            echo 'extension=zip.so' >> /etc/php/7.0/apache2/php.ini 
-            #### MOUNT EFS
-            echo "mounting efs"
-            sudo apt-get -y install nfs-common
-            mkdir -p /var/moodledata
-            chown -R www-data:www-data /var/moodledata
-            chmod -R 777 /var/moodledata
-
-            echo "${FileSystem}.efs.${AWS::Region}.amazonaws.com:/ /var/moodledata nfs4 nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2 0 0" >> /etc/fstab
-            mount -a -t nfs4
-            #todo-refactor, bad
-            sudo chmod 777 /var/moodledata/
-            echo "efs mounting complete"
-
-            # Keep upstart from complaining
-            # RUN dpkg-divert --local --rename --add /sbin/initctl
-            # RUN ln -sf /bin/true /sbin/initctl
-            #todo- REFACTOR THIS DON'T WANT THIS PERMISSIONS!!
-            chmod 755 /var/www
-            chown apache2 /var/www
-          
-            # Let the container know that there is no tty
-            export DEBIAN_FRONTEND=noninteractive
-
-            set -x
-            ENV_FILE=/root/env.sh
-            echo "In the userdata script"
-            mkdir -p `dirname $ENV_FILE`
-            cat << EOF > $ENV_FILE
-        
-            export IMAGE_BUCKET=ElastixData
-            export OUTPUT_BUCKET=regdata0813
-            EOF
-            chmod +x $ENV_FILE
-
-            cd /tmp && \
-            git clone -b MOODLE_32_STABLE git://git.moodle.org/moodle.git --depth=1 && \
-            #todo MOODLE_33_STABLE
-            mv /tmp/moodle/* /var/www/html/ && \
-            rm /var/www/html/index.html && \
-            chown -R www-data:www-data /var/www/html && \
-            #	chmod +x /etc/apache2/foreground.sh
-            #todo- REFACTOR THIS DON'T WANT THIS PERMISSIONS!!
-            chmod 777 /var/www
-            # Enable SSL, moodle requires it
-            #  a2enmod ssl && a2ensite default-ssl 
-            # if using proxy, don't need actually secure connection          
-            #use sed to make config configuration
-
-            sudo apt-get install python-pip -y
-            sudo pip install awscli
-            sudo aws s3 cp s3://moodle-deployables/config.php /var/www/html/config.php --region us-west-2
-
-            sudo sed -ie "s/<DATABASEURL>/${RDSDB.Endpoint.Address}/" /var/www/html/config.php 
-            sudo sed -ie "s/<DATABASENAME>/${DBName}/" /var/www/html/config.php
-            sudo sed -ie "s/<DATABASEUSER>/${DBMasterUser}/" /var/www/html/config.php
-            sudo sed -ie "s/<DATABASEPASSWORD>/${DBMasterPassword}/" /var/www/html/config.php
-            sudo sed -ie "s/<WWWROOT>/${MoodleDNSName}/" /var/www/html/config.php
-            sudo sed -ie "s/<MEMCACHED_URL_PORT>/${SessionElasticacheCluster.ConfigurationEndpoint.Address}:${SessionElasticacheCluster.ConfigurationEndpoint.Port}/" /var/www/html/config.php
-
-            echo "restarting apache2"
-            service apache2 restart
-            echo "about to create cron job"
-            #One liner to create cron job
-            (crontab -l 2>/dev/null; echo "*/1 * * * * /usr/bin/php  /var/www/html/admin/cli/cron.php >/dev/null") | crontab -
-            
-            read pid cmd state ppid pgrp session tty_nr tpgid rest < /proc/self/stat
-            trap "kill -TERM -$pgrp; exit" EXIT TERM KILL SIGKILL SIGTERM SIGQUIT
-
-            source /etc/apache2/envvars
-            tail -F /var/log/apache2/* &
-            exec apache2 -D FOREGROUND
-
-      SecurityGroups:
-        - !Ref EFSSecurityGroup
-        - !Ref MemcachedSecurityGroup
-        - !Ref WebAccessSecurityGroup
-        - !Ref DBAccessSecurityGroup
-      InstanceType:
-        Ref: InstanceType
-      IamInstanceProfile:
-        Ref: MoodleProfile
-
-  #DTR autoscaling group
-  MoodleAutoScalingGroup:
-    Type: AWS::AutoScaling::AutoScalingGroup
-  #  UpdatePolicy:
-  #    AutoScalingRollingUpdate:
-  #      SuspendProcesses:
-  #        - Terminate
-  #        - ReplaceUnhealthy
-    Properties:
-      AvailabilityZones:
-        Fn::GetAZs:
-          Ref: "AWS::Region"
-      VPCZoneIdentifier:
-        - !Ref WSSubnet1
-        - !Ref WSSubnet2
-        - !Ref WSSubnet3
-      LaunchConfigurationName:
-        Ref: MoodleLaunchConfiguration
-      MinSize: 2
-      MaxSize: 2
-      LoadBalancerNames:
-        - Ref: MoodleLoadBalancer
-      Tags:
-          - Key: ENV
-            Value: PROD
-            PropagateAtLaunch: 'true'
-            
-
-  CertS3Role:
-    Type: "AWS::IAM::Role"
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          -
-            Effect: "Allow"
-            Principal:
-              Service:
-                - "ec2.amazonaws.com"
-            Action:
-              - "sts:AssumeRole"
-      Path: "/"
-      Policies:
-        -
-          PolicyName: "S3MoodleCertpolicy"
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              -
-                Effect: "Allow"
-                Action: "s3:PutObject"
-                Resource:
-                  !Sub arn:aws:s3:::${CertBucket}/*
-              -
-                Effect: "Allow"
-                Action: "s3:GetObject"
-                Resource:
-                  !Sub arn:aws:s3:::${CertBucket}/*
-              -
-                Effect: "Allow"
-                Action: "s3:ListObjects"
-                #todo-this just seems wrong to me
-                # from https://forums.aws.amazon.com/message.jspa?messageID=701604
-                Resource: "*"
-              -
-                Effect: "Allow"
-                Action: "s3:DeleteObject"
-                Resource:
-                  !Sub arn:aws:s3:::${CertBucket}/*
-              -
-                #todo-this also seems wrong to me
-                #https://stackoverflow.com/questions/33319678/why-is-my-terminal-returning-this-s3-error
-                Sid: AllowListingOfAllBuckets
-                Effect: Allow
-                Action:
-                - s3:ListAllMyBuckets
-                Resource:
-                - arn:aws:s3:::*
-
-  #Instance Profile for the EC2 Instance to assume
-  MoodleProfile:
-    Type: AWS::IAM::InstanceProfile
-    Properties:
-      Path: "/"
-      Roles:
-        - Ref: CertS3Role
-
-  EFSSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupName: EFSSecurityGroup
-      GroupDescription: Security group for mount target
-      Tags:
-        - Key: Name
-          Value: EFSSecurityGroup
-      VpcId:
-        Ref: VPC
-
-  MountTargetIngress:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      GroupId:
-        Ref: EFSSecurityGroup
-      IpProtocol: tcp
-      FromPort: '2049'
-      ToPort: '2049'
-      SourceSecurityGroupId:
-        Ref: EFSSecurityGroup
-
-  FileSystem:
-    Type: AWS::EFS::FileSystem
-    Properties:
-      PerformanceMode: generalPurpose
-      FileSystemTags:
-      - Key: Name
-        Value: !Join [ "", ["EFS", Ref: Tenant ] ]
-      - Key: Tenant
-        Value:
-          Ref: Tenant
-  MountTarget1:
-    Type: AWS::EFS::MountTarget
-    Properties:
-      FileSystemId:
-        Ref: FileSystem
-      SubnetId:
-        Ref: EFSubnet1
-      SecurityGroups:
-      - Ref: EFSSecurityGroup
-  MountTarget2:
-    Type: AWS::EFS::MountTarget
-    Properties:
-      FileSystemId:
-        Ref: FileSystem
-      SubnetId:
-        Ref: EFSubnet2
-      SecurityGroups:
-      - Ref: EFSSecurityGroup
-  MountTarget3:
-    Type: AWS::EFS::MountTarget
-    Properties:
-      FileSystemId:
-        Ref: FileSystem
-      SubnetId:
-        Ref: EFSubnet3
-      SecurityGroups:
-      - Ref: EFSSecurityGroup
-  ECSubnetGroup:
-    Type: AWS::ElastiCache::SubnetGroup
-    Properties:
-      Description: Cache Subnet GroupDescription
-      SubnetIds:
-      - Ref: MCSubnet1
-
-  SessionElasticacheCluster:
-    Type: AWS::ElastiCache::CacheCluster
-    Properties:
-      AutoMinorVersionUpgrade: true
-      Engine: memcached
-      CacheNodeType: cache.t2.micro
-      CacheSubnetGroupName:
-        Ref: ECSubnetGroup
-      NumCacheNodes: 1
-      VpcSecurityGroupIds:
-        -
-          Fn::GetAtt:
-            - "MemcachedSecurityGroup"
-            - "GroupId"
-  ##
-  # Elastic cache instance to cache MUC data (not go to the shared file system)
-  ##          
-  MUCElasticacheCluster:
-    Type: AWS::ElastiCache::CacheCluster
-    Properties:
-      AutoMinorVersionUpgrade: true
-      Engine: memcached
-      CacheNodeType: cache.t2.micro
-      CacheSubnetGroupName:
-        Ref: ECSubnetGroup
-      NumCacheNodes: 1
-      VpcSecurityGroupIds:
-        -
-          Fn::GetAtt:
-            - "MemcachedSecurityGroup"
-            - "GroupId"
-
-  MemcachedSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupName: MemcachedSecurityGroup
-      GroupDescription: "Security Group for memcached access"
-      Tags:
-        - Key: Name
-          Value: MemcachedSecurityGroup
-      VpcId:
-        Ref: VPC
-
-  ElasticacheIngress:
-    Type: AWS::EC2::SecurityGroupIngress
-    Properties:
-      GroupId:
-        Ref: MemcachedSecurityGroup
-      IpProtocol: tcp
-      FromPort: '11211'
-      ToPort: '11211'
-      SourceSecurityGroupId:
-        Ref: MemcachedSecurityGroup
-
   DBAccessSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -992,6 +610,277 @@ Resources:
       ToPort: '3306'
       SourceSecurityGroupId:
         Ref: DBAccessSecurityGroup
+
+  WorldAccessSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: WorldAccessSecurityGroup
+      GroupDescription: Security Group for Web Access to Moodle ELB
+      #World accessible
+      SecurityGroupIngress:
+          - CidrIp: 0.0.0.0/0
+            IpProtocol: tcp
+            FromPort: 80
+            ToPort: 80
+      Tags:
+        - Key: ENV
+          Value: PROD
+      VpcId:
+        Ref: VPC
+
+ # Elastic Load Balancer Defintiion for Moodle
+  MoodleDNS:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneName:
+        Ref: HostedZoneName
+      Comment: Zone apex alias targeted to DockerDTRLoadBalancer.
+      RecordSets:
+      - Name:
+          !Join [".", [ !Ref MoodleDNSName , ""]]
+        Type: A
+        AliasTarget:
+          HostedZoneId: !GetAtt MoodleLoadBalancer.CanonicalHostedZoneNameID
+          DNSName: !GetAtt MoodleLoadBalancer.DNSName
+
+  MoodleLoadBalancer:
+    Type: AWS::ElasticLoadBalancing::LoadBalancer
+    Properties:
+      SecurityGroups:
+      - !Ref WebAccessSecurityGroup
+      - !Ref WorldAccessSecurityGroup
+      Scheme: internet-facing
+      Subnets:
+      - !Ref WSSubnet1
+      - !Ref WSSubnet2
+      - !Ref WSSubnet3
+      Instances:
+      - Ref: MoodleEC2Instance
+      Listeners:
+      - LoadBalancerPort: '80'
+        InstancePort: '80'
+        Protocol: TCP
+        InstanceProtocol: TCP
+      Tags:
+      - Key: ENV
+        Value: PROD
+
+  MoodleEC2Instance: 
+    Type: "AWS::EC2::Instance"
+    Properties: 
+      ImageId:
+        !FindInMap [ ImageMap, !Ref "AWS::Region", ami ]
+      KeyName:
+        Ref: KeyName
+      InstanceType:
+        Ref: InstanceType
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          GroupSet:
+            - !Ref MountTargetSecurityGroup
+            - !Ref ElasticacheSecurityGroup
+            - !Ref WebAccessSecurityGroup
+            - !Ref DBAccessSecurityGroup
+          SubnetId:
+            Ref: WSSubnet1
+      IamInstanceProfile:
+        Ref: MoodleProfile
+      UserData:
+        "Fn::Base64":
+          !Sub |
+          #!/bin/bash
+
+          # Keep upstart from complaining
+          # RUN dpkg-divert --local --rename --add /sbin/initctl
+          # RUN ln -sf /bin/true /sbin/initctl
+          mkdir /var/moodledata
+          #todo- REFACTOR THIS DON'T WANT THIS PERMISSIONS!!
+          chmod 755 /var/www
+          chown apache2 /var/www
+         
+          # Let the container know that there is no tty
+          export DEBIAN_FRONTEND=noninteractive
+
+          set -x
+          ENV_FILE=/root/env.sh
+          echo "In the userdata script"
+          mkdir -p `dirname $ENV_FILE`
+          cat << EOF > $ENV_FILE
+       
+          export IMAGE_BUCKET=ElastixData
+          export OUTPUT_BUCKET=regdata0813
+          EOF
+          chmod +x $ENV_FILE
+         
+          #ADD ./foreground.sh /etc/apache2/foreground.sh
+
+          apt-get update && \
+            apt-get -y install mysql-client pwgen python-setuptools curl git unzip apache2 php5 \
+              php5-gd libapache2-mod-php5 postfix wget supervisor php5-pgsql curl libcurl3 \
+              libcurl3-dev php5-curl php5-xmlrpc php5-intl php5-mysql git-core && \
+            cd /tmp && \
+            git clone -b MOODLE_29_STABLE git://git.moodle.org/moodle.git --depth=1 && \
+            mv /tmp/moodle/* /var/www/html/ && \
+            rm /var/www/html/index.html && \
+            chown -R www-data:www-data /var/www/html && \
+          #	chmod +x /etc/apache2/foreground.sh
+          #todo- REFACTOR THIS DON'T WANT THIS PERMISSIONS!!
+          chmod 777 /var/www
+          # Enable SSL, moodle requires it
+          a2enmod ssl && a2ensite default-ssl 
+          # if using proxy, don't need actually secure connection          
+          #use sed to make config configuration
+          sudo apt-get install python-pip -y
+          sudo pip install awscli --upgrade --user
+          aws s3 cp s3://moodle-deployables /var/www/html/config.php
+
+          sudo sed -ie "s/<DATABASEURL>/${RDSDB.Endpoint.Address}/" /var/www/html/config.php 
+          sudo sed -ie "s/<DATABASENAME>/${DBName}/" /var/www/html/config.php
+          sudo sed -ie "s/<DATABASEUSER>/${DBMasterUser}/" /var/www/html/config.php
+          sudo sed -ie "s/<DATABASEPASSWORD>/${DBMasterPassword}/" /var/www/html/config.php
+          sudo sed -ie "s/<WWWROOT>/${MoodleDNSName}/" /var/www/html/config.php
+          sudo sed -ie "s/<MEMCACHED_URL_PORT>/${ElasticacheCluster.ConfigurationEndpoint.Address}:${ElasticacheCluster.ConfigurationEndpoint.Port}/" /var/www/html/config.php
+
+          echo "placeholder" > /var/moodledata/placeholder
+          chown -R www-data:www-data /var/moodledata
+          chmod -R 777 /var/moodledata
+
+          #### MOUNT EFS
+          
+          #sudo apt-get -y install nfs-common
+          #${FileSystem}.efs.${AWS::Region}.amazonaws.com
+
+          read pid cmd state ppid pgrp session tty_nr tpgid rest < /proc/self/stat
+          trap "kill -TERM -$pgrp; exit" EXIT TERM KILL SIGKILL SIGTERM SIGQUIT
+
+          source /etc/apache2/envvars
+          tail -F /var/log/apache2/* &
+          exec apache2 -D FOREGROUND
+
+  CertS3Role:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "ec2.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "s3JenkinsCertpolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action: "s3:PutObject"
+                Resource:
+                  !Sub arn:aws:s3:::${CertBucket}/*
+              -
+                Effect: "Allow"
+                Action: "s3:GetObject"
+                Resource:
+                  !Sub arn:aws:s3:::${CertBucket}/*
+              -
+                Effect: "Allow"
+                Action: "s3:DeleteObject"
+                Resource:
+                  !Sub arn:aws:s3:::${CertBucket}/*
+
+  #Instance Profile for the EC2 Instance to assume
+  MoodleProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+        - Ref: CertS3Role
+
+  MountTargetSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId:
+        Ref: VPC
+      GroupDescription: Security group for mount target
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '2049'
+        ToPort: '2049'
+        CidrIp: 0.0.0.0/0
+  FileSystem:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      PerformanceMode: generalPurpose
+      FileSystemTags:
+      - Key: Name
+        Value: !Join [ "", ["EFS", Ref: Tenant ] ]
+      - Key: Tenant
+        Value:
+          Ref: Tenant
+  MountTarget1:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        Ref: FileSystem
+      SubnetId:
+        Ref: EFSubnet1
+      SecurityGroups:
+      - Ref: MountTargetSecurityGroup
+  MountTarget2:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        Ref: FileSystem
+      SubnetId:
+        Ref: EFSubnet2
+      SecurityGroups:
+      - Ref: MountTargetSecurityGroup
+  MountTarget3:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId:
+        Ref: FileSystem
+      SubnetId:
+        Ref: EFSubnet3
+      SecurityGroups:
+      - Ref: MountTargetSecurityGroup
+  ECSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      Description: Cache Subnet GroupDescription
+      SubnetIds:
+      - Ref: MCSubnet1
+  ElasticacheSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Elasticache Security Group
+      SecurityGroupIngress:
+        -
+          IpProtocol: "tcp"
+          FromPort: "11211"
+          ToPort: "11211"
+      VpcId:
+        Ref: VPC
+  ElasticacheCluster:
+    Type: AWS::ElastiCache::CacheCluster
+    Properties:
+      AutoMinorVersionUpgrade: true
+      Engine: memcached
+      CacheNodeType: cache.t2.micro
+      CacheSubnetGroupName:
+        Ref: ECSubnetGroup
+      NumCacheNodes: 1
+      VpcSecurityGroupIds:
+        -
+          Fn::GetAtt:
+            - "ElasticacheSecurityGroup"
+            - "GroupId"
 Outputs:
   VPC:
     Description: Main VPC
@@ -1081,7 +970,7 @@ Outputs:
     Value: !Ref FileSystem
   # CacheEndpoint:
   #   Description: Endpoint for memcached instance
-  #   Value: !GetAtt SessionElasticacheCluster.ConfigurationEndpoint.Address
+  #   Value: !GetAtt ElasticacheCluster.ConfigurationEndpoint.Address
   # CachePort:
   #   Description: Endpoint for memcached instance
-  #   Value: !GetAtt SessionElasticacheCluster.ConfigurationEndpoint.Port
+  #   Value: !GetAtt ElasticacheCluster.ConfigurationEndpoint.Port
